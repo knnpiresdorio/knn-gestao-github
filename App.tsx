@@ -21,6 +21,10 @@ import ExpensesPage from './components/pages/ExpensesPage';
 import DrePage from './components/pages/DrePage';
 import DatabasePage from './components/pages/DatabasePage';
 import SettingsPage from './components/pages/SettingsPage';
+import SystemAlert from './components/common/SystemAlert';
+import DetailsModal from './components/modals/DetailsModal';
+import OnboardingModal from './components/modals/OnboardingModal';
+import { SystemMessage } from './types/system';
 
 
 
@@ -52,12 +56,14 @@ const App = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAlertPopupOpen, setIsAlertPopupOpen] = useState(false);
   const [dbTab, setDbTab] = useState<'financial' | 'students'>('financial');
+  const [selectedSystemMessage, setSelectedSystemMessage] = useState<SystemMessage | null>(null);
 
   // --- CUSTOM HOOKS ---
   const {
     settings, setSettings, formSettings, setFormSettings, tenants,
     processedData, dataByPeriod, startDate, setStartDate, endDate, setEndDate,
-    activeFilter, setActiveFilter, resetDates, loading, lastUpdated, refreshData, error
+    activeFilter, setActiveFilter, resetDates, loading, needsSetup, lastUpdated, refreshData, messages,
+    addTenant, updateTenant, deleteTenant
   } = useAppData();
 
   const {
@@ -125,11 +131,19 @@ const App = () => {
   const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'base' | 'geral') => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Erro: O arquivo deve estar no formato .csv');
+        e.target.value = ''; // Reset input
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
         const content = event.target?.result as string;
         if (field === 'base') {
           setFormSettings(prev => ({ ...prev, csvContent: content }));
+        } else {
+          setFormSettings(prev => ({ ...prev, csvGeralContent: content }));
         }
       };
       reader.readAsText(file);
@@ -287,10 +301,22 @@ const App = () => {
                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
               </button>
             </div>
-            {error && <div className="text-rose-600 dark:text-rose-400 text-xs font-bold bg-rose-50 dark:bg-rose-900/30 px-3 py-1 rounded-full flex items-center gap-1 border border-rose-100 dark:border-rose-800"><AlertCircle size={12} /> {error}</div>}
             <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">K</div>
           </div>
         </header>
+
+        {/* System Messages Section */}
+        {messages && messages.length > 0 && (
+          <div className="px-6 md:px-8 py-4 bg-slate-50 dark:bg-slate-950 flex flex-col gap-3">
+            {messages.map(msg => (
+              <SystemAlert
+                key={msg.id}
+                message={msg}
+                onOpenDetails={setSelectedSystemMessage}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="flex-1 overflow-hidden relative flex flex-col p-6 md:p-8 bg-slate-50 dark:bg-slate-950 transition-colors">
           {activeTab === 'dashboard' && (
@@ -347,10 +373,10 @@ const App = () => {
               expensesTableData={expensesTableData}
               uniqueExpenseOptions={uniqueExpenseOptions}
               loading={loading}
-              expensesCurrentPage={expensesCurrentPage}
-              setExpensesCurrentPage={setExpensesCurrentPage}
-              expensesItemsPerPage={expensesItemsPerPage}
-              setExpensesItemsPerPage={setExpensesItemsPerPage}
+              currentPage={expensesCurrentPage}
+              setCurrentPage={setExpensesCurrentPage}
+              itemsPerPage={expensesItemsPerPage}
+              setItemsPerPage={setExpensesItemsPerPage}
               expenseFilters={expenseFilters}
               setExpenseFilters={setExpenseFilters}
               expenseSubTab={expenseSubTab}
@@ -415,12 +441,27 @@ const App = () => {
               loading={loading}
               tenants={tenants}
               handleCsvUpload={handleCsvUpload}
+              onAddTenant={addTenant}
+              onUpdateTenant={updateTenant}
+              onDeleteTenant={deleteTenant}
             />
           )}
 
 
         </div>
       </main >
+
+      {selectedSystemMessage && (
+        <DetailsModal
+          message={selectedSystemMessage}
+          onClose={() => setSelectedSystemMessage(null)}
+        />
+      )}
+
+      <OnboardingModal
+        isOpen={needsSetup && activeTab !== 'configuracoes'}
+        onConfigure={() => setActiveTab('configuracoes')}
+      />
     </div >
   );
 };

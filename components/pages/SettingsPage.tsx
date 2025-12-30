@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
     Settings, Database, Table, FileText, ChevronDown, ExternalLink, RefreshCw,
-    Palette, DollarSign, Eye, EyeOff, Moon, Check, Upload, Download, FileSpreadsheet
+    Palette, DollarSign, Eye, EyeOff, Moon, Check, Upload, Download, FileSpreadsheet, Plus, Trash2, AlertTriangle
 } from 'lucide-react';
 import { DEFAULT_CONFIG, THEME_BG_COLORS } from '../../utils/constants';
+import AddUnitModal from '../modals/AddUnitModal';
 
 interface SettingsPageProps {
     settings: any;
@@ -13,6 +14,9 @@ interface SettingsPageProps {
     loading: boolean;
     tenants: any[];
     handleCsvUpload: (e: React.ChangeEvent<HTMLInputElement>, field: 'base' | 'geral') => void;
+    onAddTenant?: (tenant: any) => Promise<void>;
+    onUpdateTenant?: (id: string, tenant: any) => Promise<void>;
+    onDeleteTenant?: (id: string) => Promise<void>;
 }
 
 const SettingsPage: React.FC<SettingsPageProps> = ({
@@ -22,8 +26,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     setFormSettings,
     loading,
     tenants,
-    handleCsvUpload
+    handleCsvUpload,
+    onAddTenant,
+    onUpdateTenant,
+    onDeleteTenant
 }) => {
+    const [isAddUnitModalOpen, setIsAddUnitModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [editingUnit, setEditingUnit] = useState<any>(null);
+    const [deletingUnit, setDeletingUnit] = useState<any>(null);
     const currentThemeBg = THEME_BG_COLORS[settings.themeColor] || 'bg-violet-600';
 
     return (
@@ -48,18 +59,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg"><Database size={20} /></div>
                             <div>
                                 <span className="block">Fonte de Dados</span>
-                                <span className="text-xs font-normal text-slate-500 block mt-0.5">Conecte sua planilha Google Sheets.</span>
+                                <span className="text-xs font-normal text-slate-500 block mt-0.5">
+                                    {formSettings.dataSource === 'google_sheets'
+                                        ? 'Conecte sua planilha Google Sheets em tempo real.'
+                                        : 'Carregue arquivos locais para análise rápida.'}
+                                </span>
                             </div>
                         </h3>
 
                         <div className="space-y-6">
                             {/* SOURCE SELECTOR */}
-                            <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
+                            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
                                 <button onClick={() => setFormSettings((s: any) => ({ ...s, dataSource: 'google_sheets' }))} className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${formSettings.dataSource === 'google_sheets' ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-                                    <Table size={14} /> Planilhas
-                                </button>
-                                <button onClick={() => setFormSettings((s: any) => ({ ...s, dataSource: 'supabase' }))} className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${formSettings.dataSource === 'supabase' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-                                    <Database size={14} /> Supabase
+                                    <Table size={14} /> Google Sheets
                                 </button>
                                 <button onClick={() => setFormSettings((s: any) => ({ ...s, dataSource: 'csv' }))} className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${formSettings.dataSource === 'csv' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
                                     <FileText size={14} /> CSV
@@ -70,9 +82,51 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             {formSettings.dataSource === 'google_sheets' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
 
-                                    {/* TENANT SELECTOR */}
+                                    {/* TENANT SELECTOR - Only for Google Sheets */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Selecionar Unidade (Preenchimento Automático)</label>
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Selecionar Unidade (Preenchimento Automático)</label>
+                                            <div className="flex items-center gap-2">
+                                                {formSettings.tenantId && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <button
+                                                            onClick={() => {
+                                                                const unit = tenants.find(t => t.id === formSettings.tenantId);
+                                                                if (unit) {
+                                                                    setEditingUnit(unit);
+                                                                    setIsAddUnitModalOpen(true);
+                                                                }
+                                                            }}
+                                                            className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-lg text-[10px] font-bold transition-all border border-blue-100 dark:border-blue-900/30"
+                                                        >
+                                                            <Settings size={12} /> Editar Unidade
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const unit = tenants.find(t => t.id === formSettings.tenantId);
+                                                                if (unit) {
+                                                                    setDeletingUnit(unit);
+                                                                    setIsDeleteModalOpen(true);
+                                                                }
+                                                            }}
+                                                            className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-bold transition-all border border-rose-100 dark:border-rose-900/30"
+                                                            title="Excluir Unidade"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingUnit(null);
+                                                        setIsAddUnitModalOpen(true);
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold transition-all border border-emerald-100 dark:border-emerald-900/30"
+                                                >
+                                                    <Plus size={12} /> Adicionar Unidade
+                                                </button>
+                                            </div>
+                                        </div>
                                         <div className="relative">
                                             <select
                                                 className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 dark:text-white appearance-none cursor-pointer"
@@ -86,14 +140,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                                             geralSheetId: selected.geral_sheet_id || DEFAULT_CONFIG.geralSheetId,
                                                             geralSheetName: selected.geral_sheet_name || DEFAULT_CONFIG.geralSheetName,
                                                             schoolName: selected.name,
-                                                            themeColor: selected.theme_color || DEFAULT_CONFIG.themeColor
+                                                            themeColor: selected.theme_color || DEFAULT_CONFIG.themeColor,
+                                                            tenantId: selected.id
                                                         }));
+                                                    } else {
+                                                        setFormSettings((s: any) => ({ ...s, tenantId: '' }));
                                                     }
                                                 }}
                                             >
                                                 <option value="">Selecione uma unidade...</option>
                                                 {tenants.map(t => (
-                                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                                    <option key={t.id} value={t.id} selected={formSettings.tenantId === t.id}>{t.name}</option>
                                                 ))}
                                             </select>
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><ChevronDown size={16} /></div>
@@ -109,21 +166,41 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         </div>
 
                                         <div>
-                                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">ID da Planilha</label>
-                                            <div className="relative">
-                                                <input type="text" className="w-full text-sm font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-600 dark:text-slate-300 transition-all" value={formSettings.spreadsheetId} onChange={(e) => setFormSettings((s: any) => ({ ...s, spreadsheetId: e.target.value }))} />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><ExternalLink size={16} /></div>
+                                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 flex items-center gap-2">
+                                                ID da Planilha <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[9px] lowercase font-normal">automático</span>
+                                            </label>
+                                            <div className="relative group/field">
+                                                <input
+                                                    type="text"
+                                                    readOnly
+                                                    className="w-full text-sm font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none text-slate-400 dark:text-slate-500 transition-all cursor-not-allowed"
+                                                    value={formSettings.spreadsheetId}
+                                                    placeholder="Selecione uma unidade acima..."
+                                                />
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"><ExternalLink size={16} /></div>
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
                                                 <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Nome da Aba</label>
-                                                <input type="text" className="w-full text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-600 dark:text-slate-300 transition-all font-mono" value={formSettings.sheetName} onChange={(e) => setFormSettings((s: any) => ({ ...s, sheetName: e.target.value }))} />
+                                                <input
+                                                    type="text"
+                                                    readOnly
+                                                    className="w-full text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none text-slate-400 dark:text-slate-500 transition-all font-mono cursor-not-allowed"
+                                                    value={formSettings.sheetName}
+                                                    placeholder="Automático"
+                                                />
                                             </div>
                                             <div>
                                                 <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Nome da Empresa</label>
-                                                <input type="text" className="w-full text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-600 dark:text-slate-300 transition-all" value={formSettings.schoolName} onChange={(e) => setFormSettings((s: any) => ({ ...s, schoolName: e.target.value }))} />
+                                                <input
+                                                    type="text"
+                                                    readOnly
+                                                    className="w-full text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none text-slate-400 dark:text-slate-500 transition-all cursor-not-allowed"
+                                                    value={formSettings.schoolName}
+                                                    placeholder="Automático"
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -135,51 +212,74 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         </div>
 
                                         <div>
-                                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">ID da Planilha (Geral)</label>
-                                            <div className="relative">
-                                                <input type="text" className="w-full text-sm font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 text-slate-600 dark:text-slate-300 transition-all" value={formSettings.geralSheetId} onChange={(e) => setFormSettings((s: any) => ({ ...s, geralSheetId: e.target.value }))} />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><ExternalLink size={16} /></div>
+                                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 flex items-center gap-2">
+                                                ID da Planilha (Geral) <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[9px] lowercase font-normal">automático</span>
+                                            </label>
+                                            <div className="relative group/field">
+                                                <input
+                                                    type="text"
+                                                    readOnly
+                                                    className="w-full text-sm font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none text-slate-400 dark:text-slate-500 transition-all cursor-not-allowed"
+                                                    value={formSettings.geralSheetId}
+                                                    placeholder="Selecione uma unidade acima..."
+                                                />
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"><ExternalLink size={16} /></div>
                                             </div>
                                         </div>
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Nome da Aba (Geral)</label>
-                                            <input type="text" className="w-full text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 text-slate-600 dark:text-slate-300 transition-all font-mono" value={formSettings.geralSheetName} onChange={(e) => setFormSettings((s: any) => ({ ...s, geralSheetName: e.target.value }))} />
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                className="w-full text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none text-slate-400 dark:text-slate-500 transition-all font-mono cursor-not-allowed"
+                                                value={formSettings.geralSheetName}
+                                                placeholder="Automático"
+                                            />
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* SUPABASE INFO */}
-                            {formSettings.dataSource === 'supabase' && (
-                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-300">
-                                    <Database size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-                                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">Supabase Database</h4>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 max-w-xs mx-auto">Em breve sua aplicação estará conectada diretamente ao banco de dados Supabase para maior performance e segurança.</p>
-                                </div>
-                            )}
 
                             {/* CSV INFO */}
                             {formSettings.dataSource === 'csv' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <label className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600 transition-colors cursor-pointer group text-center relative">
+                                        <label className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border-2 border-dashed transition-colors cursor-pointer group text-center relative ${formSettings.csvContent ? 'border-blue-500 bg-blue-50/10' : 'border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600'}`}>
                                             <input type="file" accept=".csv" className="hidden" onChange={(e) => handleCsvUpload(e, 'base')} />
-                                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform"><Upload size={18} /></div>
+                                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                                {formSettings.csvContent ? <Check size={18} /> : <Upload size={18} />}
+                                            </div>
                                             <h5 className="text-xs font-bold text-slate-700 dark:text-slate-200">Base Principal CSV</h5>
                                             <p className="text-[10px] text-slate-400 mt-1">{formSettings.csvContent ? 'Arquivo Selecionado' : 'Clique para selecionar'}</p>
                                         </label>
 
-                                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-600 transition-colors cursor-pointer group text-center opacity-50 pointer-events-none" title="Em breve">
-                                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform"><Upload size={18} /></div>
+                                        <label className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border-2 border-dashed transition-colors cursor-pointer group text-center relative ${formSettings.csvGeralContent ? 'border-purple-500 bg-purple-50/10' : 'border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-600'}`}>
+                                            <input type="file" accept=".csv" className="hidden" onChange={(e) => handleCsvUpload(e, 'geral')} />
+                                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                                {formSettings.csvGeralContent ? <Check size={18} /> : <Upload size={18} />}
+                                            </div>
                                             <h5 className="text-xs font-bold text-slate-700 dark:text-slate-200">Base Geral CSV</h5>
-                                            <p className="text-[10px] text-slate-400 mt-1">Em breve</p>
-                                        </div>
+                                            <p className="text-[10px] text-slate-400 mt-1">{formSettings.csvGeralContent ? 'Arquivo Selecionado' : 'Clique para selecionar'}</p>
+                                        </label>
                                     </div>
 
                                     <div className="flex gap-4 justify-center">
-                                        <button className="text-[10px] text-blue-600 hover:underline flex items-center gap-1"><Download size={12} /> Modelo Base Principal</button>
-                                        <button className="text-[10px] text-purple-600 hover:underline flex items-center gap-1"><Download size={12} /> Modelo Base Geral</button>
+                                        <a
+                                            href="/files/modeloBasePrincipal_FluxodeCaixa_EntradasSaidas_KNN.xlsx"
+                                            download
+                                            className="text-[10px] text-blue-600 hover:underline flex items-center gap-1"
+                                        >
+                                            <Download size={12} /> Modelo Base Principal
+                                        </a>
+                                        <a
+                                            href="/files/modeloBaseGeral_AlunoInfo_KNN.xlsx"
+                                            download
+                                            className="text-[10px] text-purple-600 hover:underline flex items-center gap-1"
+                                        >
+                                            <Download size={12} /> Modelo Base Geral
+                                        </a>
                                     </div>
                                 </div>
                             )}
@@ -269,6 +369,62 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                     </div>
                 </div>
             </div>
+            <AddUnitModal
+                isOpen={isAddUnitModalOpen}
+                initialData={editingUnit}
+                onClose={() => setIsAddUnitModalOpen(false)}
+                onSave={async (data) => {
+                    if (editingUnit) {
+                        if (onUpdateTenant) await onUpdateTenant(editingUnit.id, data);
+                    } else {
+                        if (onAddTenant) await onAddTenant(data);
+                    }
+                }}
+            />
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && deletingUnit && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 text-center space-y-6">
+                            <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-rose-500/10">
+                                <AlertTriangle size={32} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Excluir Unidade?</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    Esta ação não pode ser desfeita. Todas as configurações da unidade <span className="font-bold text-slate-700 dark:text-slate-200">"{deletingUnit.name}"</span> serão removidas.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => {
+                                        setIsDeleteModalOpen(false);
+                                        setDeletingUnit(null);
+                                    }}
+                                    className="flex-1 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all font-sans"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (onDeleteTenant) {
+                                            await onDeleteTenant(deletingUnit.id);
+                                            setIsDeleteModalOpen(false);
+                                            setDeletingUnit(null);
+                                            alert('Unidade excluída com sucesso.');
+                                        }
+                                    }}
+                                    className="flex-1 px-6 py-3 bg-rose-600 text-white text-sm font-bold rounded-xl hover:bg-rose-700 transition-all font-sans shadow-lg shadow-rose-500/20"
+                                >
+                                    Confirmar Exclusão
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

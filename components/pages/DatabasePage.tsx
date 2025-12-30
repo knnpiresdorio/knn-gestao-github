@@ -52,6 +52,13 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
     dbTab,
     setDbTab
 }) => {
+    // Calculate total count for the active dataset
+    const totalDatasetCount = React.useMemo(() => {
+        if (dbTab === 'financial') {
+            return processedData.filter(i => i.source !== 'geral').length;
+        }
+        return processedData.filter(i => i.source === 'geral').length;
+    }, [processedData, dbTab]);
 
     const renderSortableHeader = (label: string, key: string, sortConfig: SortConfig[], setSort: any, align: string = 'left') => {
         const sortItem = sortConfig.find(s => s.key === key);
@@ -93,7 +100,7 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                         {/* Contador de Registros */}
                         <div className="flex items-baseline justify-center sm:justify-start gap-1">
                             <span className="font-bold text-slate-800 dark:text-white text-2xl">{tableData.length}</span>
-                            <span className="text-sm font-medium text-slate-500">de {processedData.length}</span>
+                            <span className="text-sm font-medium text-slate-500">de {totalDatasetCount}</span>
                         </div>
                         <span className="text-[10px] uppercase font-bold text-slate-400">Registros Exibidos</span>
 
@@ -146,23 +153,25 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                         </div>
                     </div>
 
-                    <div className="lg:col-span-8">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Filtrar por Status</label>
-                        <div className="flex flex-wrap gap-2">
-                            {['Todos', 'Pago', 'Pendente', 'Atrasado', 'Cancelado', 'Evadido', 'Trancado'].map(st => (
-                                <button
-                                    key={st}
-                                    onClick={() => { setStatusFilter(st); setCurrentPage(1); }}
-                                    className={`flex-1 sm:flex-none px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all uppercase text-center border ${statusFilter === st
-                                        ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-lg' // Estilo Ativo
-                                        : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800' // Estilo Inativo
-                                        }`}
-                                >
-                                    {st}
-                                </button>
-                            ))}
+                    {dbTab === 'financial' && (
+                        <div className="lg:col-span-8 animate-in fade-in duration-300">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Filtrar por Status</label>
+                            <div className="flex flex-wrap gap-2">
+                                {['Todos', 'Pago', 'Pendente', 'Atrasado', 'Cancelado', 'Evadido', 'Trancado'].map(st => (
+                                    <button
+                                        key={st}
+                                        onClick={() => { setStatusFilter(st); setCurrentPage(1); }}
+                                        className={`flex-1 sm:flex-none px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all uppercase text-center border ${statusFilter === st
+                                            ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-lg' // Estilo Ativo
+                                            : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800' // Estilo Inativo
+                                            }`}
+                                    >
+                                        {st}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
@@ -190,7 +199,6 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                                         {renderSortableHeader('Telefone', 'telefone_contato', dbSortConfig, setDbSortConfig)}
                                         {renderSortableHeader('Data Matrícula', 'data_matricula', dbSortConfig, setDbSortConfig)}
                                         {renderSortableHeader('Valor Contrato', 'valor_contrato', dbSortConfig, setDbSortConfig, 'right')}
-                                        {renderSortableHeader('Situação', 'status', dbSortConfig, setDbSortConfig, 'center')}
                                     </>
                                 )}
                             </tr>
@@ -243,19 +251,11 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                                             <td className="px-6 py-4 text-right font-mono text-xs text-slate-600 dark:text-slate-300">
                                                 {item['valor_contrato'] ? `R$ ${item['valor_contrato']}` : '-'}
                                             </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${item.status === 'Ativo' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                    item.status === 'Inadimplente' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
-                                                        'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                                    }`}>
-                                                    {item.status || item['situacao_contrato'] || 'Indefinido'}
-                                                </span>
-                                            </td>
                                         </tr>
                                     );
                                 }
                             }) : (
-                                <tr><td colSpan={7} className="p-16 text-center text-slate-400 flex flex-col items-center justify-center opacity-50"><Database size={48} className="mb-4 text-slate-300" /><span>Nenhum registro encontrado.</span></td></tr>
+                                <tr><td colSpan={dbTab === 'financial' ? 7 : 6} className="p-16 text-center text-slate-400 flex flex-col items-center justify-center opacity-50"><Database size={48} className="mb-4 text-slate-300" /><span>Nenhum registro encontrado.</span></td></tr>
                             )}
                         </tbody>
                     </table>

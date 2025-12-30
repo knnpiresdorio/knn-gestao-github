@@ -1,15 +1,15 @@
 
 export const DEFAULT_CONFIG = {
-    spreadsheetId: '1Du9r4VGTNoI3Ynn5Nvd4IpIf39YauVoMeb1PuZjE4EY',
-    sheetName: 'Base_looker',
-    geralSheetId: '1TCNPZUhl3Gf0AsZy7g13F5mR_b8v-vICygBx-lJ_HTk',
-    geralSheetName: 'Geral',
-    schoolName: 'KNN Pires do Rio',
+    spreadsheetId: '',
+    sheetName: '',
+    geralSheetId: '',
+    geralSheetName: '',
+    schoolName: '',
     darkMode: true,
     showCents: true,
     privacyMode: false,
     themeColor: 'violet',
-    dataSource: 'google_sheets' // 'google_sheets' | 'supabase' | 'csv'
+    dataSource: 'google_sheets' // 'google_sheets' | 'csv'
 };
 
 export const THEME_BG_COLORS: Record<string, string> = {

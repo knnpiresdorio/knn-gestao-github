@@ -37,7 +37,7 @@ export const useDatabaseData = (processedData: any[], startDate: string, endDate
                 (i.nome_completo_aluno && i.nome_completo_aluno.toString().toLowerCase().includes(lower))
             );
         }
-        if (statusFilter !== 'Todos') {
+        if (tab === 'financial' && statusFilter !== 'Todos') {
             filtered = filtered.filter((i: any) => i.status === statusFilter);
         }
         return sortData(filtered, dbSortConfig);

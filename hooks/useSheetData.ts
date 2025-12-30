@@ -2,14 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import Papa from 'papaparse';
 import { startOfDay, parseISO } from 'date-fns';
 import { supabase } from '../lib/supabaseClient';
+import { SystemMessage } from '../types/system';
 
 export interface SheetSettings {
     spreadsheetId: string;
     sheetName: string;
     geralSheetId?: string;
     geralSheetName?: string;
-    dataSource?: 'google_sheets' | 'supabase' | 'csv';
+    dataSource?: 'google_sheets' | 'csv';
     csvContent?: string;
+    csvGeralContent?: string;
     tenantId?: string;
 }
 
@@ -18,7 +20,7 @@ interface SheetDataState {
     geralData: any[];
     mergedData: any[];
     loading: boolean;
-    error: string | null;
+    messages: SystemMessage[];
     lastUpdated: string | null;
 }
 
@@ -34,7 +36,7 @@ export const useSheetData = (settings: SheetSettings, enabled: boolean = true) =
         geralData: [],
         mergedData: [],
         loading: false,
-        error: null,
+        messages: [],
         lastUpdated: null,
     });
 
@@ -46,7 +48,9 @@ export const useSheetData = (settings: SheetSettings, enabled: boolean = true) =
             const response = await fetch(url);
             const text = await response.text();
             if (text.includes('"status":"error"') || text.includes('"reason":"invalid_query"')) {
-                throw new Error(`A aba "${sheetName}" não foi encontrada na planilha ${label}. Verifique o nome exato.`);
+                const error = new Error(`A aba "${sheetName}" não foi encontrada.`);
+                (error as any).details = `Verifique se o nome da aba "${sheetName}" está escrito exatamente como na planilha ${label}.`;
+                throw error;
             }
         } catch (err: any) {
             if (err.message.includes('A aba')) throw err;
@@ -61,7 +65,7 @@ export const useSheetData = (settings: SheetSettings, enabled: boolean = true) =
         if (dataSource === 'csv' && !settings.csvContent) return;
         if (!enabled) return;
 
-        setState(prev => ({ ...prev, loading: true, error: null }));
+        setState(prev => ({ ...prev, loading: true, messages: [] }));
 
         try {
             let parsedBaseData: any[] = [];
@@ -106,23 +110,15 @@ export const useSheetData = (settings: SheetSettings, enabled: boolean = true) =
                 parsedBaseData = parseCsv(baseCsvText);
                 parsedGeralData = geralCsvText ? parseCsv(geralCsvText) : [];
 
-            } else if (dataSource === 'supabase') {
-                // Fetch from Supabase 'transactions' table
-                let query = supabase.from('transactions').select('*');
-
-                if (settings.tenantId) {
-                    query = query.eq('tenant_id', settings.tenantId);
-                }
-
-                const { data, error } = await query;
-
-                if (error) throw new Error(`Erro Supabase: ${error.message}`);
-                parsedBaseData = data || [];
 
             } else if (dataSource === 'csv') {
                 if (settings.csvContent) {
                     const result = Papa.parse(settings.csvContent, { header: true, skipEmptyLines: true });
                     parsedBaseData = result.data;
+                }
+                if (settings.csvGeralContent) {
+                    const result = Papa.parse(settings.csvGeralContent, { header: true, skipEmptyLines: true });
+                    parsedGeralData = result.data;
                 }
             }
 
@@ -133,16 +129,23 @@ export const useSheetData = (settings: SheetSettings, enabled: boolean = true) =
                 geralData: parsedGeralData,
                 mergedData: [...parsedBaseData, ...parsedGeralData],
                 loading: false,
-                error: null,
+                messages: [],
                 lastUpdated: timestamp
             });
 
         } catch (err: any) {
             console.error("Erro no carregamento:", err);
+            const newMessage: SystemMessage = {
+                id: `err-${Date.now()}`,
+                type: 'error',
+                title: 'Erro no Carregamento',
+                description: err.message || 'Houve um problema ao sincronizar os dados.',
+                details: err.details || err.stack || JSON.stringify(err, null, 2)
+            };
             setState(prev => ({
                 ...prev,
                 loading: false,
-                error: err.message || 'Erro desconhecido ao carregar dados.'
+                messages: [newMessage]
             }));
         }
     }, [settings, enabled]);
@@ -152,5 +155,5 @@ export const useSheetData = (settings: SheetSettings, enabled: boolean = true) =
         fetchData();
     }, [fetchData]);
 
-    return { ...state, refetch: fetchData };
+    return { ...state, refetch: fetchData, error: state.messages[0]?.description || null };
 };

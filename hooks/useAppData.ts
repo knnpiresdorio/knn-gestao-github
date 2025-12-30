@@ -10,8 +10,8 @@ import { parseISO } from 'date-fns';
 export const useAppData = () => {
     // --- AUTH & SETTINGS ---
     const { tenant, loading: authLoading } = useAuthStore();
-    const [settings, setSettings] = useState({ ...DEFAULT_CONFIG, csvContent: '' });
-    const [formSettings, setFormSettings] = useState({ ...DEFAULT_CONFIG, csvContent: '' });
+    const [settings, setSettings] = useState({ ...DEFAULT_CONFIG, csvContent: '', csvGeralContent: '' });
+    const [formSettings, setFormSettings] = useState({ ...DEFAULT_CONFIG, csvContent: '', csvGeralContent: '' });
 
     // Update settings when tenant loads
     useEffect(() => {
@@ -33,16 +33,124 @@ export const useAppData = () => {
 
     // Fetch available tenants
     const [tenants, setTenants] = useState<any[]>([]);
+
+    const fetchTenants = async () => {
+        const { data } = await supabase.from('tenants').select('*').order('name');
+        if (data) setTenants(data);
+    };
+
     useEffect(() => {
-        const fetchTenants = async () => {
-            const { data } = await supabase.from('tenants').select('*').order('name');
-            if (data) setTenants(data);
-        };
         fetchTenants();
     }, []);
 
+    const addTenant = async (newTenant: any) => {
+        const { data, error } = await supabase
+            .from('tenants')
+            .insert([newTenant])
+            .select();
+
+        if (error) throw error;
+
+        await fetchTenants();
+        return data?.[0];
+    };
+
+    const updateTenant = async (id: string, updatedData: any) => {
+        try {
+            const { data, error } = await supabase
+                .from('tenants')
+                .update(updatedData)
+                .eq('id', id)
+                .select();
+
+            if (error) throw error;
+
+            await fetchTenants();
+            return data?.[0];
+        } catch (err: any) {
+            console.error('Error updating tenant:', err);
+            throw err;
+        }
+    };
+
+    const deleteTenant = async (id: string) => {
+        try {
+            const { error } = await supabase
+                .from('tenants')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // If we deleted the current tenant, clear settings
+            if (settings.tenantId === id) {
+                const emptySettings = { ...DEFAULT_CONFIG, csvContent: '', csvGeralContent: '' };
+                setSettings(emptySettings);
+                setFormSettings(emptySettings);
+            } else if (formSettings.tenantId === id) {
+                // If we deleted the unit currently selected in the form dropdown
+                setFormSettings(prev => ({ ...prev, tenantId: '' }));
+            }
+
+            await fetchTenants();
+        } catch (err: any) {
+            console.error('Error deleting tenant:', err);
+            throw err;
+        }
+    };
+
+    // Auto-sync settings (Active & Form) when tenants array changes
+    useEffect(() => {
+        if (tenants.length === 0) return;
+
+        // 1. Sync Active Settings
+        if (settings.tenantId) {
+            const activeTenant = tenants.find(t => t.id === settings.tenantId);
+            if (activeTenant) {
+                const refreshed = {
+                    ...settings,
+                    spreadsheetId: activeTenant.spreadsheet_id,
+                    sheetName: activeTenant.sheet_name || DEFAULT_CONFIG.sheetName,
+                    geralSheetId: activeTenant.geral_sheet_id || DEFAULT_CONFIG.geralSheetId,
+                    geralSheetName: activeTenant.geral_sheet_name || DEFAULT_CONFIG.geralSheetName,
+                    schoolName: activeTenant.name,
+                    themeColor: activeTenant.theme_color || DEFAULT_CONFIG.themeColor,
+                };
+                if (JSON.stringify(refreshed) !== JSON.stringify(settings)) {
+                    setSettings(refreshed);
+                }
+            }
+        }
+
+        // 2. Sync Form Settings (dropdown selection)
+        if (formSettings.tenantId) {
+            const selectedTenant = tenants.find(t => t.id === formSettings.tenantId);
+            if (selectedTenant) {
+                const refreshed = {
+                    ...formSettings,
+                    spreadsheetId: selectedTenant.spreadsheet_id,
+                    sheetName: selectedTenant.sheet_name || DEFAULT_CONFIG.sheetName,
+                    geralSheetId: selectedTenant.geral_sheet_id || DEFAULT_CONFIG.geralSheetId,
+                    geralSheetName: selectedTenant.geral_sheet_name || DEFAULT_CONFIG.geralSheetName,
+                    schoolName: selectedTenant.name,
+                    themeColor: selectedTenant.theme_color || DEFAULT_CONFIG.themeColor,
+                };
+                if (JSON.stringify(refreshed) !== JSON.stringify(formSettings)) {
+                    setFormSettings(refreshed);
+                }
+            }
+        }
+    }, [tenants, settings.tenantId, formSettings.tenantId]);
+
     // --- DATA FETCHING ---
-    const { data: baseData, geralData, loading: dataLoading, error, lastUpdated, refetch } = useSheetData(settings, !authLoading);
+    const needsSetup = useMemo(() => {
+        if (settings.dataSource === 'csv') {
+            return !settings.csvContent;
+        }
+        return !settings.spreadsheetId || !settings.tenantId;
+    }, [settings]);
+
+    const { data: baseData, geralData, loading: dataLoading, messages, lastUpdated, refetch } = useSheetData(settings, !authLoading && !needsSetup);
 
     const rawData = useMemo(() => {
         const base = (baseData || []).map((r: any) => ({ ...r, source: 'base' }));
@@ -147,9 +255,14 @@ export const useAppData = () => {
         activeFilter, setActiveFilter,
         resetDates,
         loading: dataLoadingCombined,
+        needsSetup,
         lastUpdated,
         refreshData: refetch,
-        error,
-        rawData
+        messages,
+        rawData,
+        addTenant,
+        updateTenant,
+        deleteTenant,
+        refreshTenants: fetchTenants
     };
 };
