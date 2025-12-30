@@ -1,0 +1,5 @@
+{
+  "name": "KNN Dashboard",
+  "description": "A comprehensive financial dashboard for KNN Pires do Rio, featuring KPI tracking, DRE analysis, and transaction management using data from Google Sheets.",
+  "requestFramePermissions": []
+}
