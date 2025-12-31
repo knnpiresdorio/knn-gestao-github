@@ -354,17 +354,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                 </button>
                             </div>
 
-                            {/* Separator */}
-                            <div className="h-px bg-slate-100 dark:bg-slate-800 my-4"></div>
 
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-3">Cor de Destaque</label>
-                            <div className="flex gap-2 justify-between">
-                                {['blue', 'violet', 'emerald', 'rose', 'amber'].map(color => (
-                                    <button key={color} onClick={() => setFormSettings((s: any) => ({ ...s, themeColor: color }))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${formSettings.themeColor === color ? `bg-${color}-500 text-white shadow-lg shadow-${color}-500/40 ring-2 ring-offset-2 ring-${color}-500 dark:ring-offset-slate-900` : `bg-${color}-100 dark:bg-${color}-900/20 text-${color}-500 hover:bg-${color}-200`}`}>
-                                        {formSettings.themeColor === color && <Check size={14} strokeWidth={3} />}
-                                    </button>
-                                ))}
-                            </div>
                         </div>
                     </div>
                 </div>

@@ -1,56 +1,84 @@
 import { parseCurrency } from './formatters';
 
 export const calculateActiveBase = (students: any[]) => {
-    const active = students.filter(s =>
-        s.status === 'Ativo' || s.status === 'Inadimplente'
-    ).length;
-    return { active, total: students.length };
+    const active = students.filter(s => s.activeFlag === 1).length;
+    const enrolled = students.filter(s => s.enrolledFlag === 1).length;
+    return { active, enrolled, total: students.length };
 };
 
 export const calculateChurnRate = (students: any[]) => {
-    const { active } = calculateActiveBase(students);
-    const churned = students.filter(s =>
-        s.status === 'Desistente' || s.status === 'Evadido' || s.status === 'Cancelado'
-    ).length;
+    const { active, enrolled } = calculateActiveBase(students);
+    const finished = students.filter(s => s.finishedFlag === 1).length;
+    const churned = students.filter(s => s.churnFlag === 1).length;
 
-    const total = active + churned;
-    if (total === 0) return 0;
+    // Denominator should include everyone who entered the base and either is still there, finished, or churned.
+    const totalDenom = active + enrolled + finished + churned;
+    if (totalDenom === 0) return { percentage: 0, absolute: 0, total: 0 };
 
-    return (churned / total) * 100;
+    return {
+        percentage: (churned / totalDenom) * 100,
+        absolute: churned,
+        total: totalDenom
+    };
 };
 
 export const calculateAverageTicket = (students: any[]) => {
-    const activeStudents = students.filter(s =>
-        s.status === 'Ativo' || s.status === 'Inadimplente'
-    );
+    const activeStudents = students.filter(s => s.activeFlag === 1);
 
     if (activeStudents.length === 0) return 0;
 
     const totalValue = activeStudents.reduce((acc, curr) => {
-        // Assuming 'valor_atual' is the column name based on user request.
-        // Need to handle potential currency formatting if it comes as string "R$ 100,00"
-        const val = typeof curr.valor_atual === 'number'
-            ? curr.valor_atual
-            : parseCurrency(curr.valor_atual || '0');
+        // Use 'valor_atual' from Base Geral if available, otherwise fallback
+        const rawVal = curr.valor_atual || curr['valor_atual'] || curr.currentValue || 0;
+        const val = typeof rawVal === 'number'
+            ? rawVal
+            : parseCurrency(String(rawVal || '0'));
         return acc + val;
     }, 0);
 
     return totalValue / activeStudents.length;
 };
 
-export const calculateScholarshipImpact = (students: any[]) => {
-    // Distribution of scholarships
-    // Group by ranges: 0%, 1-10%, 11-30%, 31-50%, >50%
-    const ranges = {
-        '0%': 0,
-        '1-10%': 0,
-        '11-30%': 0,
-        '31-50%': 0,
-        '>50%': 0
+export const calculateTicketDistribution = (students: any[]) => {
+    const activeStudents = students.filter(s => s.activeFlag === 1);
+    const counts = {
+        under250: 0,
+        between251And350: 0,
+        between351And450: 0,
+        over450: 0
     };
 
+    activeStudents.forEach(s => {
+        const rawVal = s.valor_atual || s['valor_atual'] || s.currentValue || 0;
+        const val = typeof rawVal === 'number' ? rawVal : parseCurrency(String(rawVal || '0'));
+
+        if (val <= 250) counts.under250++;
+        else if (val <= 350) counts.between251And350++;
+        else if (val <= 450) counts.between351And450++;
+        else counts.over450++;
+    });
+
+    const total = activeStudents.length || 1;
+    return [
+        { label: 'Até R$ 250', value: counts.under250, percentage: (counts.under250 / total) * 100 },
+        { label: 'R$ 251 - 350', value: counts.between251And350, percentage: (counts.between251And350 / total) * 100 },
+        { label: 'R$ 351 - 450', value: counts.between351And450, percentage: (counts.between351And450 / total) * 100 },
+        { label: '> R$ 450', value: counts.over450, percentage: (counts.over450 / total) * 100 },
+    ];
+};
+
+export const calculateScholarshipImpact = (students: any[]) => {
+    const tiers = ['0%', '5%', '10%', '15%', '20%', '25%', '30%', '35%', '40%', '45%', '50%', '55%', '60%', '65%', '70%', '100%'];
+    const counts: Record<string, number> = {};
+    const values: Record<string, number> = {};
+
+    // Initialize
+    tiers.forEach(t => {
+        counts[t] = 0;
+        values[t] = 0;
+    });
+
     students.forEach(s => {
-        // Assuming 'bolsa' is a percentage string like "10%" or number
         let val = 0;
         if (typeof s.bolsa === 'string') {
             val = parseFloat(s.bolsa.replace('%', '').replace(',', '.')) || 0;
@@ -58,14 +86,22 @@ export const calculateScholarshipImpact = (students: any[]) => {
             val = s.bolsa || 0;
         }
 
-        if (val === 0) ranges['0%']++;
-        else if (val <= 10) ranges['1-10%']++;
-        else if (val <= 30) ranges['11-30%']++;
-        else if (val <= 50) ranges['31-50%']++;
-        else ranges['>50%']++;
+        const rawPayVal = s.valor_atual || s['valor_atual'] || s.currentValue || 0;
+        const payVal = typeof rawPayVal === 'number' ? rawPayVal : parseCurrency(String(rawPayVal || '0'));
+
+        // Map to the closest tier
+        const percentageStr = `${Math.round(val)}%`;
+        if (counts.hasOwnProperty(percentageStr)) {
+            counts[percentageStr]++;
+            values[percentageStr] += payVal;
+        }
     });
 
-    return Object.entries(ranges).map(([name, value]) => ({ name, value }));
+    return tiers.map(name => ({
+        name,
+        value: counts[name],
+        totalValue: values[name]
+    }));
 };
 
 export const calculateStudentProfile = (students: any[]) => {
@@ -77,11 +113,32 @@ export const calculateStudentProfile = (students: any[]) => {
         byBook[book] = (byBook[book] || 0) + 1;
     });
 
-    // Top 5 books + others
-    const sortedBooks = Object.entries(byBook)
+    return Object.entries(byBook)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
         .map(([name, value]) => ({ name, value }));
+};
 
-    return sortedBooks;
+export const calculatePaymentDayDistribution = (students: any[]) => {
+    const byDay: Record<string, { count: number; value: number }> = {};
+
+    students.forEach(s => {
+        const day = String(s.dia_pagamento || s.paymentDay || 'Outros');
+        if (!byDay[day]) byDay[day] = { count: 0, value: 0 };
+
+        const rawVal = s.valor_atual || s['valor_atual'] || s.currentValue || 0;
+        const val = typeof rawVal === 'number' ? rawVal : parseCurrency(String(rawVal || '0'));
+
+        byDay[day].count += 1;
+        byDay[day].value += val;
+    });
+
+    return Object.entries(byDay)
+        .map(([name, stats]) => ({
+            name: name === 'Outros' ? 'Outros' : `Dia ${name}`,
+            count: stats.count,
+            value: stats.value,
+            // Sort helper
+            sortKey: name === 'Outros' ? 99 : parseInt(name) || 0
+        }))
+        .sort((a, b) => a.sortKey - b.sortKey);
 };

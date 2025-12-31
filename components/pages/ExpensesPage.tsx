@@ -146,13 +146,13 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                 <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-700">
                     <button
                         onClick={() => { setExpenseSubTab('fixed'); setCurrentPage(1); }}
-                        className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${expenseSubTab === 'fixed' ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${expenseSubTab === 'fixed' ? 'text-violet-600 dark:text-violet-400 border-violet-600 dark:border-violet-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Todas Fixas
                     </button>
                     <button
                         onClick={() => { setExpenseSubTab('variable'); setCurrentPage(1); }}
-                        className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${expenseSubTab === 'variable' ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${expenseSubTab === 'variable' ? 'text-violet-600 dark:text-violet-400 border-violet-600 dark:border-violet-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Todas Variáveis
                     </button>

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import KpiCard from '../dashboard/KpiCard';
+import TicketMedioCard from '../dashboard/TicketMedioCard';
 import { CustomBarTooltip, CustomPieTooltip, CustomBarLabel, CustomTooltip } from '../charts/CustomTooltips';
 import { CHART_COLORS, THEME_BG_COLORS } from '../../utils/constants'; // Added THEME_BG_COLORS
 
@@ -190,47 +191,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     settings={settings}
                     tooltipText="Inadimplência: Geral / Mês Atual / Últimos 3 Meses / Últimos 12 Meses"
                 />
-                <KpiCard
-                    label="Ticket Médio"
-                    value={formatBRL(stats.ticketMedio, settings.showCents, settings.privacyMode)}
-                    sub={
-                        <div className="flex flex-col gap-3 w-full mt-3">
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                                Base: <strong className="text-slate-700 dark:text-white">{financialIndicators.ticketDistribution?.total || 0} Alunos Ativos</strong>
-                            </span>
-
-                            <div className="space-y-2">
-                                {[
-                                    { label: 'Até R$ 250', val: financialIndicators.ticketDistribution?.upto250 || 0, color: 'bg-slate-400' },
-                                    { label: 'R$ 251 - 350', val: financialIndicators.ticketDistribution?.range251to350 || 0, color: 'bg-purple-400' },
-                                    { label: 'R$ 351 - 450', val: financialIndicators.ticketDistribution?.range351to450 || 0, color: 'bg-purple-500' },
-                                    { label: '> R$ 450', val: financialIndicators.ticketDistribution?.above450 || 0, color: 'bg-purple-600' }
-                                ].map((item, idx) => {
-                                    const total = financialIndicators.ticketDistribution?.total || 1;
-                                    const pct = (item.val / total) * 100;
-                                    return (
-                                        <div key={idx} className="flex flex-col gap-0.5">
-                                            <div className="flex justify-between items-end text-[10px]">
-                                                <span className="text-slate-500 dark:text-slate-400 font-medium">{item.label}</span>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="font-bold text-slate-700 dark:text-slate-200">{item.val}</span>
-                                                    <span className="text-slate-400">({pct.toFixed(0)}%)</span>
-                                                </div>
-                                            </div>
-                                            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                                <div className={`h-full rounded-full ${item.color}`} style={{ width: `${pct}%` }} />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    }
-                    icon={Receipt}
-                    color="purple"
-                    theme={settings.themeColor}
+                <TicketMedioCard
+                    value={stats.ticketMedio}
+                    distribution={financialIndicators.ticketDistribution}
+                    activeCount={financialIndicators.ticketTotal}
+                    showChart={false}
                     settings={settings}
-                    tooltipText="Valor médio dos contratos ativos e distribuição por faixa de preço."
                 />
 
             </div>

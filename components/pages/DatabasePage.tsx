@@ -4,6 +4,7 @@ import TablePagination from '../common/TablePagination';
 import StatusBadge from '../common/StatusBadge';
 import CategoryBadge from '../common/CategoryBadge';
 import { SortConfig } from '../../utils/formatters';
+import { THEME_BG_COLORS } from '../../utils/constants';
 
 interface DatabasePageProps {
     tableData: any[]; // For length count
@@ -27,6 +28,14 @@ interface DatabasePageProps {
     handleApplyFilters: () => void;
     dbTab: 'financial' | 'students';
     setDbTab: (tab: 'financial' | 'students') => void;
+    categoryFilter?: string;
+    setCategoryFilter?: (val: string) => void;
+    accountFilter?: string;
+    setAccountFilter?: (val: string) => void;
+    paymentMethodFilter?: string;
+    setPaymentMethodFilter?: (val: string) => void;
+    financialsTotals?: Record<string, number>;
+    uniqueOptions?: { categories: string[], accounts: string[], paymentMethods: string[] };
 }
 
 const DatabasePage: React.FC<DatabasePageProps> = ({
@@ -49,9 +58,20 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
     formatBRL,
     settings,
     handleApplyFilters,
+
     dbTab,
-    setDbTab
+    setDbTab,
+    categoryFilter,
+    setCategoryFilter,
+    accountFilter,
+    setAccountFilter,
+    paymentMethodFilter,
+    setPaymentMethodFilter,
+    financialsTotals,
+    uniqueOptions
 }) => {
+    const currentThemeBg = THEME_BG_COLORS[settings.themeColor] || 'bg-violet-600';
+
     // Calculate total count for the active dataset
     const totalDatasetCount = React.useMemo(() => {
         if (dbTab === 'financial') {
@@ -78,18 +98,14 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
 
     return (
         <div className="flex flex-col h-full animate-in fade-in duration-300">
-            {/* HEADER - NEW DESIGN */}
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6 flex-shrink-0">
-                <div className="flex items-center gap-4">
-                    {/* Ícone Roxo (Database) */}
-                    <div className={`p-3 rounded-xl bg-violet-600 text-white shadow-lg transform -rotate-3`}>
-                        <Database size={28} />
-                    </div>
-                    {/* Textos */}
-                    <div>
-                        <h3 className="text-2xl font-bold text-slate-800 dark:text-white">Base de Dados</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Visualize, busque e filtre todas as transações da planilha.</p>
-                    </div>
+            {/* HEADER - MATCH DASHBOARD STYLE */}
+            <div className="flex items-center gap-4 mb-6 shrink-0">
+                <div className={`w-12 h-12 rounded-xl ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                    <Database size={24} />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Base de Dados</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Visualize, busque e filtre todas as transações da planilha.</p>
                 </div>
             </div>
 
@@ -138,37 +154,103 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                 </div>
 
                 {/* SEARCH & FILTERS ROW */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <div className="lg:col-span-4 relative">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Buscar</label>
-                        <div className="relative group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Ex: Mensalidade, João..."
-                                className="pl-10 pr-4 py-2.5 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all shadow-sm"
-                                value={searchTerm}
-                                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                            />
+                {/* SEARCH & FILTERS ROW */}
+                <div className="flex flex-col gap-6">
+                    {/* TOP ROW: Search + Main Filters */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <div className="lg:col-span-5 relative">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Buscar</label>
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Ex: Mensalidade, João..."
+                                    className="pl-10 pr-4 py-2.5 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all shadow-sm"
+                                    value={searchTerm}
+                                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                />
+                            </div>
                         </div>
+
+                        {dbTab === 'financial' && (
+                            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in fade-in duration-300">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Categoria</label>
+                                    <select
+                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all shadow-sm"
+                                        value={categoryFilter || 'Todas'}
+                                        onChange={(e) => setCategoryFilter && setCategoryFilter(e.target.value)}
+                                    >
+                                        <option value="Todas">Todas</option>
+                                        {uniqueOptions?.categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Conta Bancária</label>
+                                    <select
+                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all shadow-sm"
+                                        value={accountFilter || 'Todas'}
+                                        onChange={(e) => setAccountFilter && setAccountFilter(e.target.value)}
+                                    >
+                                        <option value="Todas">Todas</option>
+                                        {uniqueOptions?.accounts.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Forma Pag.</label>
+                                    <select
+                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all shadow-sm"
+                                        value={paymentMethodFilter || 'Todas'}
+                                        onChange={(e) => setPaymentMethodFilter && setPaymentMethodFilter(e.target.value)}
+                                    >
+                                        <option value="Todas">Todas</option>
+                                        {uniqueOptions?.paymentMethods.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
+                    {/* STATUS FILTER ROW */}
                     {dbTab === 'financial' && (
-                        <div className="lg:col-span-8 animate-in fade-in duration-300">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Filtrar por Status</label>
-                            <div className="flex flex-wrap gap-2">
-                                {['Todos', 'Pago', 'Pendente', 'Atrasado', 'Cancelado', 'Evadido', 'Trancado'].map(st => (
-                                    <button
-                                        key={st}
-                                        onClick={() => { setStatusFilter(st); setCurrentPage(1); }}
-                                        className={`flex-1 sm:flex-none px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all uppercase text-center border ${statusFilter === st
-                                            ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-lg' // Estilo Ativo
-                                            : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800' // Estilo Inativo
-                                            }`}
-                                    >
-                                        {st}
-                                    </button>
-                                ))}
+                        <div className="animate-in fade-in duration-300">
+                            <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-end">
+                                <div className="flex-1 w-full lg:w-auto">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Filtrar por Status</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['Todos', 'Pago', 'Pendente', 'Atrasado', 'Cancelado'].map(st => (
+                                            <button
+                                                key={st}
+                                                onClick={() => { setStatusFilter(st); setCurrentPage(1); }}
+                                                className={`flex-1 sm:flex-none px-3 py-2.5 rounded-xl text-[10px] sm:text-[11px] font-bold transition-all uppercase text-center border ${statusFilter === st
+                                                    ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-lg'
+                                                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                    }`}
+                                            >
+                                                {st}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* TOTALS DISPLAY */}
+                                {financialsTotals && (
+                                    <div className="flex-shrink-0 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex gap-4 overflow-x-auto custom-scrollbar max-w-full">
+                                        {Object.entries(financialsTotals).sort((a, b) => b[1] - a[1]).map(([status, total]) => {
+                                            if (total === 0) return null;
+                                            const colorClass = total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+                                            return (
+                                                <div key={status} className="flex flex-col px-2 min-w-[100px] border-r border-slate-200 dark:border-slate-800 last:border-0">
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase truncate">{status}</span>
+                                                    <span className={`text-sm font-bold whitespace-nowrap ${colorClass}`}>
+                                                        {formatBRL(total, settings.showCents, settings.privacyMode)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                        {Object.keys(financialsTotals).length === 0 && <span className="text-xs text-slate-400 italic px-2">Sem dados para somar</span>}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

@@ -5,152 +5,199 @@ import {
     calculateChurnRate,
     calculateAverageTicket,
     calculateScholarshipImpact,
-    calculateStudentProfile
+    calculateStudentProfile,
+    calculateTicketDistribution,
+    calculatePaymentDayDistribution
 } from '../utils/studentMetrics';
 
 export const useStudentsData = (processedData: any[]) => {
     // --- STATE ---
     const [searchTerm, setSearchTerm] = useState('');
-    const [studentFilters, setStudentFilters] = useState({ status: 'Todos' });
+    const [studentFilters, setStudentFilters] = useState<{ status: string, book?: string, period?: string, day?: string }>({ status: 'Todos' });
     const [stuSortConfig, setStuSortConfig] = useState<SortConfig[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [retentionYear, setRetentionYear] = useState(new Date().getFullYear());
 
-    // --- RAW DATA PROCESSING ---
+    // --- RAW DATA PROCESSING (Hydrated Object Pattern) ---
     const studentsRaw = useMemo(() => {
         if (!processedData || !processedData.length) return [];
 
         const studentsMap = new Map();
-        const nameToStudentMap = new Map(); // For matching financial data
+        const nameToIdIndex = new Map(); // Fallback index for reconciliation
 
-        // 1. REGISTRATION PHASE (Base Geral)
+        // STEP 1: INDEXING (Base Geral - The Skeleton)
         processedData.forEach(row => {
             if (row.source !== 'geral') return;
 
-            const studentId = row['id'] || row.desc; // ID is primary
-            const rawName = (row['nome_completo_aluno'] || row['Nome'] || row.desc || '').trim();
+            const id = (row['id'] || row.desc || '').trim();
+            const rawName = (row['nome_completo_aluno'] || row['Nome'] || '').trim();
 
-            // Parse [x/y] from name if present for matching purposes
-            let cleanNameForMatch = rawName;
-            const match = rawName.match(/(\s|^|\[|\()(\d+)\/(\d+)(?:\[.*?\])?(\)|\])?/);
-            if (match) cleanNameForMatch = rawName.replace(match[0], ' ').trim();
+            // Cleanup name for fallback matching (removing [1/x] tags)
+            let matchName = rawName.toLowerCase();
+            const tagMatch = rawName.match(/(\s|^|\[|\()(\d+)\/(\d+)(?:\[.*?\])?(\)|\])?/);
+            if (tagMatch) matchName = rawName.replace(tagMatch[0], ' ').trim().toLowerCase();
 
-            if (!studentsMap.has(studentId)) {
-                studentsMap.set(studentId, {
-                    id: studentId,
-                    name: rawName,
-                    cleanName: cleanNameForMatch,
-                    totalPaid: 0,
-                    totalPending: 0,
-                    totalOverdue: 0,
-                    installments: [],
-                    status: 'Ativo',
-                    lastPayment: null,
-                    nextDue: null,
-                    responsible: row['nome_responsavel_financeiro'] || row.resp || '',
-                    phone: row['telefone_contato'] || '',
-                    age: parseInt(row['idade']) || null,
-                    enrollmentDate: row['data_matricula'] || null,
-                    contractValue: null,
-                    currentValue: null,
-                    scholarship: row['bolsa'] || null,
-                    book: row['livro'] || null,
-                    paymentDay: row['dia_pagamento'] || null,
-                    period: row['tempo_primeiro_contrato'] || null,
-                    vigente: row['vigente'] || null,
-                    externalId: row['id'] || null,
-                    cpf: row['cpf_aluno'] || null,
-                    financialCpf: row['cpf_responsavel_financeiro'] || null,
-                    birthDate: row['data_nascimento'] || null,
-                    exitDate: null,
-                    statusFlags: { matriculado: false, trancado: false, desistente: false, evadido: false }
-                });
+            if (!id) return; // Skip invalid rows without ID
 
-                // Index by clean name AND responsible to improve matching
-                if (cleanNameForMatch) nameToStudentMap.set(cleanNameForMatch.toLowerCase(), studentId);
+            const student = {
+                ...row, // Preserve all original columns
+                id,
+                name: rawName,
+                matchName,
+                responsible: (row['nome_responsavel_financeiro'] || row.resp || '').trim(),
+                phone: row['telefone_contato'] || '',
+                age: parseInt(row['idade']) || null,
+                enrollmentDate: row['data_matricula'] || null,
+                contractValue: 0,
+                currentValue: 0,
+                valor_atual: 0,
+                scholarship: row['bolsa'] || '0%',
+                book: row['livro'] || null,
+                paymentDay: row['dia_pagamento'] || null,
+                period: row['tempo_primeiro_contrato'] || null,
+                cpf: row['cpf_aluno'] || null,
+                financialCpf: row['cpf_responsavel_financeiro'] || null,
+                birthDate: row['data_nascimento'] || null,
+
+                // Real-time Flags (Columns from Geral)
+                // Real-time Flags (Columns from Geral)
+                flags: {
+                    vigente: row['vigente'] === true || row['vigente'] === 'TRUE',
+                    matriculado: row['matriculado'] === true || row['matriculado'] === 'TRUE',
+                    concluido: row['concluido'] === true || row['concluido'] === 'TRUE',
+                    trancadoDate: null as Date | null,
+                    desistenteDate: null as Date | null,
+                    evadidoDate: null as Date | null,
+                    concluidoDate: null as Date | null
+                },
+
+                // Buckets for enrichment
+                installments: [] as any[],
+                totalPaid: 0,
+                totalPending: 0,
+                totalOverdue: 0,
+                lastPayment: null as number | null,
+                nextDue: null as number | null,
+                status: 'Outros',
+                // Metric Flags
+                retentionFlag: 0,
+                churnFlag: 0,
+                pauseFlag: 0
+            };
+
+            // Parse exit dates if present
+            const parseDate = (val: any) => {
+                if (!val || val === 'TRUE' || val === 'FALSE' || val === true || val === false) return null;
+
+                // If already a date object
+                if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+
+                if (typeof val !== 'string') return null;
+
+                // Try parsing DD/MM/YYYY
+                const match = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                if (match) {
+                    const d = parseInt(match[1]);
+                    const m = parseInt(match[2]) - 1;
+                    const y = parseInt(match[3]);
+                    const date = new Date(y, m, d);
+                    return isNaN(date.getTime()) ? null : date;
+                }
+
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? null : d;
+            };
+            student.flags.trancadoDate = parseDate(row['trancado']);
+            student.flags.desistenteDate = parseDate(row['desistente']);
+            student.flags.evadidoDate = parseDate(row['evadido']);
+            student.flags.concluidoDate = parseDate(row['concluido']);
+
+            // Parse values
+            const cleanVal = (v: any) => {
+                const s = String(v || '0').replace('R$', '').trim().replace(/\./g, '').replace(',', '.');
+                return parseFloat(s) || 0;
+            };
+
+            if (row['valor_contrato']) student.contractValue = cleanVal(row['valor_contrato']);
+            if (row['valor_atual']) {
+                const v = cleanVal(row['valor_atual']);
+                student.valor_atual = v;
+                student.currentValue = v;
             }
 
-            const student = studentsMap.get(studentId);
-
-            // Detailed Mapping from 'geral'
-            if (row['valor_contrato']) {
-                const valStr = String(row['valor_contrato']).replace('R$', '').trim().replace(/\./g, '').replace(',', '.');
-                student.contractValue = parseFloat(valStr) || 0;
-            }
-
-            // Churn Logic
-            const churnCols = [row['trancado'], row['desistente'], row['evadido']];
-            const validChurnDates = churnCols
-                .map(d => {
-                    if (!d || typeof d !== 'string') return null;
-                    if (d.toUpperCase() === 'TRUE' || d.toUpperCase() === 'FALSE') return null;
-                    const parsed = new Date(d);
-                    return isNaN(parsed.getTime()) ? null : parsed;
-                })
-                .filter(d => d !== null) as Date[];
-
-            if (validChurnDates.length > 0) {
-                validChurnDates.sort((a, b) => a.getTime() - b.getTime());
-                student.exitDate = validChurnDates[0];
-            }
-
-            student.statusFlags.matriculado = row['matriculado'] === true || row['matriculado'] === 'TRUE';
-            student.statusFlags.trancado = row['trancado'] === true || row['trancado'] === 'TRUE' || !!validChurnDates.length;
-            student.statusFlags.desistente = row['desistente'] === true || row['desistente'] === 'TRUE';
-            student.statusFlags.evadido = row['evadido'] === true || row['evadido'] === 'TRUE';
+            studentsMap.set(id, student);
+            if (matchName) nameToIdIndex.set(matchName, id);
         });
 
-        // 2. FINANCIAL ENRICHMENT PHASE (Transactions)
+        // STEP 2: BUCKETING (Financeiro - The Muscle)
         processedData.forEach(row => {
             if (row.source === 'geral' || row.type !== 'Entrada') return;
 
-            const rawDesc = (row.desc || '').trim();
-            const rawResp = (row.resp || '').trim();
+            const desc = (row.desc || '').trim();
+            const resp = (row.resp || '').trim();
 
-            // Match logic: Try to find student by name in the description or responsible
-            let studentToUpdate = null;
+            // Reconciliation Strategy: 1. ID check (if in desc), 2. Name check, 3. Resp check
+            let studentId = null;
 
-            // Try to match description (clean any [1/x] first)
-            let cleanDesc = rawDesc;
-            const match = rawDesc.match(/(\s|^|\[|\()(\d+)\/(\d+)(?:\[.*?\])?(\)|\])?/);
-            if (match) cleanDesc = rawDesc.replace(match[0], ' ').trim();
+            // Try matching ID directly if it's in a specific column or found in desc
+            if (row.id && studentsMap.has(row.id)) {
+                studentId = row.id;
+            } else {
+                // Try matching cleaned description name
+                let cleanDesc = desc.toLowerCase();
+                const tagMatch = desc.match(/(\s|^|\[|\()(\d+)\/(\d+)(?:\[.*?\])?(\)|\])?/);
+                if (tagMatch) cleanDesc = desc.replace(tagMatch[0], ' ').trim().toLowerCase();
 
-            const idFromDesc = nameToStudentMap.get(cleanDesc.toLowerCase());
-            const idFromResp = rawResp ? nameToStudentMap.get(rawResp.toLowerCase()) : null;
+                studentId = nameToIdIndex.get(cleanDesc) || (resp ? nameToIdIndex.get(resp.toLowerCase()) : null);
+            }
 
-            if (idFromDesc) studentToUpdate = studentsMap.get(idFromDesc);
-            else if (idFromResp) studentToUpdate = studentsMap.get(idFromResp);
+            if (studentId) {
+                const student = studentsMap.get(studentId);
+                student.installments.push(row);
 
-            if (studentToUpdate) {
-                studentToUpdate.installments.push({ ...row, current: match ? parseInt(match[2]) : null, total: match ? parseInt(match[3]) : null });
-
+                // Cumulative Financials
                 if (row.status === 'Pago') {
-                    studentToUpdate.totalPaid += row.absVal;
-                    if (row.ts && (!studentToUpdate.lastPayment || row.ts > studentToUpdate.lastPayment)) {
-                        studentToUpdate.lastPayment = row.ts;
-                    }
+                    student.totalPaid += row.absVal;
+                    if (row.ts && (!student.lastPayment || row.ts > student.lastPayment)) student.lastPayment = row.ts;
                 } else if (row.status === 'Pendente') {
-                    studentToUpdate.totalPending += row.absVal;
-                    if (row.ts && (!studentToUpdate.nextDue || row.ts < studentToUpdate.nextDue)) {
-                        studentToUpdate.nextDue = row.ts;
-                    }
+                    student.totalPending += row.absVal;
+                    if (row.ts && (!student.nextDue || row.ts < student.nextDue)) student.nextDue = row.ts;
                 } else if (row.status === 'Atrasado') {
-                    studentToUpdate.totalOverdue += row.absVal;
-                    if (row.ts && (!studentToUpdate.nextDue || row.ts < studentToUpdate.nextDue)) {
-                        studentToUpdate.nextDue = row.ts;
-                    }
+                    student.totalOverdue += row.absVal;
+                    if (row.ts && (!student.nextDue || row.ts < student.nextDue)) student.nextDue = row.ts;
                 }
             }
         });
 
-        // 3. FINAL PROCESSING
+        // STEP 3: COMPUTATION (Applying Hierarchy & Formatting)
         return Array.from(studentsMap.values()).map((s: any) => {
-            // Determine status from Base Geral flags first
-            if (s.statusFlags.evadido) s.status = 'Evadido';
-            else if (s.statusFlags.trancado) s.status = 'Trancado';
-            else if (s.statusFlags.desistente) s.status = 'Cancelado';
-            else if (s.totalOverdue > 0) s.status = 'Inadimplente';
-            else s.status = 'Ativo';
+            // Business Logic Priority: Concluido > Evadido > Desistente > Trancado > Ativo > Matriculado > Outros
+            if (s.flags.concluido || s.flags.concluidoDate) {
+                s.status = 'Concluído';
+            } else if (s.flags.evadidoDate) {
+                s.status = 'Evadido';
+            } else if (s.flags.desistenteDate) {
+                s.status = 'Desistente';
+            } else if (s.flags.trancadoDate) {
+                s.status = 'Trancado';
+            } else if (s.flags.vigente) {
+                s.status = s.totalOverdue > 0 ? 'Inadimplente/Ativo' : 'Ativo';
+            } else if (s.flags.matriculado) {
+                s.status = s.totalOverdue > 0 ? 'Inadimplente/Matriculado' : 'Matriculado';
+            } else {
+                s.status = 'Outros';
+            }
+
+            // Flags for Dashboard
+            s.activeFlag = (s.status === 'Ativo' || s.status === 'Inadimplente/Ativo') ? 1 : 0;
+            s.enrolledFlag = (s.status === 'Matriculado' || s.status === 'Inadimplente/Matriculado') ? 1 : 0;
+            s.finishedFlag = (s.status === 'Concluído') ? 1 : 0;
+            s.churnFlag = (s.status === 'Desistente' || s.status === 'Evadido') ? 1 : 0;
+            s.pauseFlag = (s.status === 'Trancado') ? 1 : 0;
+
+            // Deprecated (keeping for compatibility with other internal components if any, but marking as unused in metrics)
+            s.retentionFlag = s.activeFlag + s.enrolledFlag;
 
             s.nextDueDateStr = s.nextDue ? new Date(s.nextDue).toLocaleDateString('pt-BR') : '-';
 
@@ -185,7 +232,13 @@ export const useStudentsData = (processedData: any[]) => {
         });
 
         if (studentFilters.status !== 'Todos') {
-            list = list.filter(s => s.status === studentFilters.status);
+            if (studentFilters.status === 'Ativo') {
+                list = list.filter(s => s.status === 'Ativo' || s.status === 'Inadimplente/Ativo');
+            } else if (studentFilters.status === 'Matriculado') {
+                list = list.filter(s => s.status === 'Matriculado' || s.status === 'Inadimplente/Matriculado');
+            } else {
+                list = list.filter(s => s.status === studentFilters.status);
+            }
         }
         if (studentFilters.book && studentFilters.book !== 'Todos') {
             list = list.filter(s => s.book === studentFilters.book);
@@ -220,51 +273,65 @@ export const useStudentsData = (processedData: any[]) => {
 
     // --- KPIS & STATS ---
     const studentMetrics = useMemo(() => ({
-        activeBase: calculateActiveBase(studentsData),
-        churnRate: calculateChurnRate(studentsData),
-        avgTicket: calculateAverageTicket(studentsData)
-    }), [studentsData]);
+        activeBase: calculateActiveBase(studentsRaw),
+        churnRate: calculateChurnRate(studentsRaw),
+        avgTicket: calculateAverageTicket(studentsRaw),
+        ticketDistribution: calculateTicketDistribution(studentsRaw)
+    }), [studentsRaw]);
 
-    const scholarshipData = useMemo(() => calculateScholarshipImpact(studentsData), [studentsData]);
-    const studentProfileData = useMemo(() => calculateStudentProfile(studentsData), [studentsData]);
+    const scholarshipData = useMemo(() => {
+        const activeBase = studentsRaw.filter(s => s.activeFlag === 1 || s.enrolledFlag === 1);
+        return calculateScholarshipImpact(activeBase);
+    }, [studentsRaw]);
+
+    const studentProfileData = useMemo(() => {
+        const activeBase = studentsRaw.filter(s => s.activeFlag === 1 || s.enrolledFlag === 1);
+        return calculateStudentProfile(activeBase);
+    }, [studentsRaw]);
+
+    const paymentDayData = useMemo(() => {
+        const activeBase = studentsRaw.filter(s => s.activeFlag === 1 || s.enrolledFlag === 1);
+        return calculatePaymentDayDistribution(activeBase);
+    }, [studentsRaw]);
 
     const retentionStats = useMemo(() => {
-        const currentYear = new Date().getFullYear();
+        const currentYear = retentionYear;
         const prevYear = currentYear - 1;
 
-        // Use studentsRaw to identify students registered in Base Geral
-        const count = (year: number, semester: number, status: string) => {
-            return studentsRaw.filter(s => {
-                if (s.status !== status) return false;
-                // Check if any installment matched from Base Geral (or just transaction dates)
-                // Actually, for retention, we usually look at the date they reached that status.
-                // But simplified: check if they have installments in that period.
-                return s.installments.some((i: any) => {
-                    if (!i.dateObj) return false;
-                    const y = i.dateObj.getFullYear();
-                    const m = i.dateObj.getMonth() + 1;
-                    const sem = m <= 6 ? 1 : 2;
-                    return y === year && sem === semester;
-                });
+        const countByDate = (year: number, semester: number, dateKey: string) => {
+            return studentsRaw.filter((s: any) => {
+                const date = s.flags[dateKey];
+                if (!date) return false;
+
+                const d = new Date(date);
+                if (isNaN(d.getTime())) return false;
+
+                const y = d.getFullYear();
+                const m = d.getMonth() + 1;
+                const sem = m <= 6 ? 1 : 2;
+
+                return y === year && sem === semester;
             }).length;
         };
 
         return {
             currentYear,
+            selectedYear: retentionYear,
+            setRetentionYear,
             cancelado: {
-                currS1: count(currentYear, 1, 'Cancelado'), prevS1: count(prevYear, 1, 'Cancelado'),
-                currS2: count(currentYear, 2, 'Cancelado'), prevS2: count(prevYear, 2, 'Cancelado')
+                currS1: countByDate(currentYear, 1, 'desistenteDate'), prevS1: countByDate(prevYear, 1, 'desistenteDate'),
+                currS2: countByDate(currentYear, 2, 'desistenteDate'), prevS2: countByDate(prevYear, 2, 'desistenteDate')
             },
             evadido: {
-                currS1: count(currentYear, 1, 'Evadido'), prevS1: count(prevYear, 1, 'Evadido'),
-                currS2: count(currentYear, 2, 'Evadido'), prevS2: count(prevYear, 2, 'Evadido')
+                currS1: countByDate(currentYear, 1, 'evadidoDate'), prevS1: countByDate(prevYear, 1, 'evadidoDate'),
+                currS2: countByDate(currentYear, 2, 'evadidoDate'), prevS2: countByDate(prevYear, 2, 'evadidoDate')
             },
             trancado: {
-                currS1: count(currentYear, 1, 'Trancado'), prevS1: count(prevYear, 1, 'Trancado'),
-                currS2: count(currentYear, 2, 'Trancado'), prevS2: count(prevYear, 2, 'Trancado')
+                currS1: countByDate(currentYear, 1, 'trancadoDate'), prevS1: countByDate(prevYear, 1, 'trancadoDate'),
+                currS2: countByDate(currentYear, 2, 'trancadoDate'), prevS2: countByDate(prevYear, 2, 'trancadoDate')
             }
         };
-    }, [studentsRaw]);
+    }, [studentsRaw, retentionYear]);
 
     return {
         studentsData,
@@ -272,11 +339,13 @@ export const useStudentsData = (processedData: any[]) => {
         retentionStats,
         scholarshipData,
         studentProfileData,
+        paymentDayData,
         searchTerm, setSearchTerm,
         studentFilters, setStudentFilters,
         stuSortConfig, setStuSortConfig,
         currentPage, setCurrentPage,
         itemsPerPage, setItemsPerPage,
-        uniqueOptions
+        uniqueOptions,
+        totalStudentsCount: studentsRaw.length
     };
 };

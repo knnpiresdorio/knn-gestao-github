@@ -77,47 +77,49 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                 <div className="my-6 mx-2 border-t border-slate-100 dark:border-slate-800/50"></div>
 
-                {isSidebarOpen ? (
-                    <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 animate-in slide-in-from-left-2 duration-300">
-                        <div className="flex items-center gap-2 mb-4 text-slate-500 dark:text-slate-400">
-                            <CalendarDays size={16} />
-                            <span className="text-xs font-bold uppercase tracking-wider">Período de Análise</span>
-                        </div>
-                        <div className="space-y-3 mb-4">
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-[10px] font-bold text-slate-400 uppercase">De</span></div>
-                                <input type="date" className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg py-2.5 pl-8 pr-2 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveFilter(''); }} />
+                {activeTab !== 'students' && (
+                    isSidebarOpen ? (
+                        <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 animate-in slide-in-from-left-2 duration-300">
+                            <div className="flex items-center gap-2 mb-4 text-slate-500 dark:text-slate-400">
+                                <CalendarDays size={16} />
+                                <span className="text-xs font-bold uppercase tracking-wider">Período de Análise</span>
                             </div>
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-[10px] font-bold text-slate-400 uppercase">Até</span></div>
-                                <input type="date" className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg py-2.5 pl-9 pr-2 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveFilter(''); }} />
+                            <div className="space-y-3 mb-4">
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-[10px] font-bold text-slate-400 uppercase">De</span></div>
+                                    <input type="date" className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg py-2.5 pl-8 pr-2 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveFilter(''); }} />
+                                </div>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-[10px] font-bold text-slate-400 uppercase">Até</span></div>
+                                    <input type="date" className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg py-2.5 pl-9 pr-2 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveFilter(''); }} />
+                                </div>
+                            </div>
+                            <label className="text-[9px] font-bold text-slate-400 uppercase mb-2 block ml-1">Filtros Rápidos</label>
+                            <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-1 mb-2">
+                                <button onClick={() => setFilterPeriod('last_3_months')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'last_3_months' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>-3 Meses</button>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-1"></div>
+                                <button onClick={() => setFilterPeriod('current_month')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'current_month' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Mês Atual</button>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-1"></div>
+                                <button onClick={() => setFilterPeriod('next_3_months')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'next_3_months' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>+3 Meses</button>
+                            </div>
+                            <label className="text-[9px] font-bold text-slate-400 uppercase mb-2 block ml-1">Visão Anual</label>
+                            <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-1 mb-4">
+                                <button onClick={() => setFilterPeriod('last_year')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'last_year' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Ant.</button>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-1"></div>
+                                <button onClick={() => setFilterPeriod('current_year')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'current_year' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Atual</button>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-1"></div>
+                                <button onClick={() => setFilterPeriod('next_year')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'next_year' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Próx.</button>
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-slate-700/50 mt-4">
+                                <button onClick={resetDates} className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 transition-colors"><RotateCcw size={10} /> Padrão</button>
+                                <button onClick={() => { setStartDate(''); setEndDate(''); setActiveFilter(''); }} className="text-[10px] font-bold text-rose-400 hover:text-rose-600 flex items-center gap-1 transition-colors"><X size={10} /> Limpar</button>
                             </div>
                         </div>
-                        <label className="text-[9px] font-bold text-slate-400 uppercase mb-2 block ml-1">Filtros Rápidos</label>
-                        <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-1 mb-2">
-                            <button onClick={() => setFilterPeriod('last_3_months')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'last_3_months' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>-3 Meses</button>
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-1"></div>
-                            <button onClick={() => setFilterPeriod('current_month')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'current_month' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Mês Atual</button>
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-1"></div>
-                            <button onClick={() => setFilterPeriod('next_3_months')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'next_3_months' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>+3 Meses</button>
+                    ) : (
+                        <div className="flex flex-col items-center gap-4 py-4 animate-in fade-in duration-300 delay-150">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400" title="Filtros de Data"><CalendarDays size={16} /></div>
                         </div>
-                        <label className="text-[9px] font-bold text-slate-400 uppercase mb-2 block ml-1">Visão Anual</label>
-                        <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-1 mb-4">
-                            <button onClick={() => setFilterPeriod('last_year')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'last_year' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Ant.</button>
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-1"></div>
-                            <button onClick={() => setFilterPeriod('current_year')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'current_year' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Atual</button>
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-1"></div>
-                            <button onClick={() => setFilterPeriod('next_year')} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFilter === 'next_year' ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Próx.</button>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-slate-700/50 mt-4">
-                            <button onClick={resetDates} className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 transition-colors"><RotateCcw size={10} /> Padrão</button>
-                            <button onClick={() => { setStartDate(''); setEndDate(''); setActiveFilter(''); }} className="text-[10px] font-bold text-rose-400 hover:text-rose-600 flex items-center gap-1 transition-colors"><X size={10} /> Limpar</button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center gap-4 py-4 animate-in fade-in duration-300 delay-150">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400" title="Filtros de Data"><CalendarDays size={16} /></div>
-                    </div>
+                    )
                 )}
             </nav>
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 space-y-2">

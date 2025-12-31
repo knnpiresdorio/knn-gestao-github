@@ -67,13 +67,14 @@ const App = () => {
   } = useAppData();
 
   const {
-    studentsData, studentMetrics, retentionStats, scholarshipData, studentProfileData,
+    studentsData, studentMetrics, retentionStats, scholarshipData, studentProfileData, paymentDayData,
     searchTerm: studentSearch, setSearchTerm: setStudentSearch,
     studentFilters, setStudentFilters,
     stuSortConfig, setStuSortConfig,
     currentPage: studentsPage, setCurrentPage: setStudentsPage,
     itemsPerPage: studentsItems, setItemsPerPage: setStudentsItems,
-    uniqueOptions: studentOptions
+    uniqueOptions: studentOptions,
+    totalStudentsCount
   } = useStudentsData(processedData);
 
   const {
@@ -94,9 +95,14 @@ const App = () => {
     tableData, paginatedData,
     searchTerm: dbSearch, setSearchTerm: setDbSearch,
     statusFilter: dbStatus, setStatusFilter: setDbStatus,
+    categoryFilter, setCategoryFilter,
+    accountFilter, setAccountFilter,
+    paymentMethodFilter, setPaymentMethodFilter,
     dbSortConfig, setDbSortConfig,
     currentPage: dbPage, setCurrentPage: setDbPage,
-    itemsPerPage: dbItems, setItemsPerPage: setDbItems
+    itemsPerPage: dbItems, setItemsPerPage: setDbItems,
+    financialsTotals,
+    uniqueOptions: dbUniqueOptions
   } = useDatabaseData(processedData, startDate, endDate, dbTab);
 
   const { user, loading: authLoading, signOut, initialize } = useAuthStore();
@@ -285,11 +291,7 @@ const App = () => {
                   </span>
                 </button>
 
-                <AlertsModal
-                  isOpen={isAlertPopupOpen}
-                  onClose={() => setIsAlertPopupOpen(false)}
-                  alerts={alerts}
-                />
+
               </>
             )}
           </div>
@@ -348,6 +350,7 @@ const App = () => {
               retentionStats={retentionStats}
               scholarshipData={scholarshipData}
               studentProfileData={studentProfileData}
+              paymentDayData={paymentDayData}
               loading={loading}
               currentPage={studentsPage}
               setCurrentPage={setStudentsPage}
@@ -365,6 +368,7 @@ const App = () => {
               studentsScrollRef={studentsScrollRef}
               studentsTableTopRef={studentsTableTopRef}
               uniqueOptions={studentOptions}
+              totalDatasetCount={totalStudentsCount}
             />
           )}
 
@@ -415,20 +419,25 @@ const App = () => {
               setSearchTerm={setDbSearch}
               statusFilter={dbStatus}
               setStatusFilter={setDbStatus}
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              accountFilter={accountFilter}
+              setAccountFilter={setAccountFilter}
+              paymentMethodFilter={paymentMethodFilter}
+              setPaymentMethodFilter={setPaymentMethodFilter}
               startDate={startDate}
               endDate={endDate}
               processedData={processedData}
               dbSortConfig={dbSortConfig}
               setDbSortConfig={setDbSortConfig}
-              handleSort={sortData as any}
+              handleSort={handleSort}
               formatBRL={formatBRL}
               settings={settings}
-              handleApplyFilters={() => {
-                setGraphFilters({ search: dbSearch, status: dbStatus });
-                setActiveTab('dashboard');
-              }}
+              handleApplyFilters={handleApplyFilters}
               dbTab={dbTab}
               setDbTab={setDbTab}
+              financialsTotals={financialsTotals}
+              uniqueOptions={dbUniqueOptions}
             />
           )}
 
@@ -457,6 +466,13 @@ const App = () => {
           onClose={() => setSelectedSystemMessage(null)}
         />
       )}
+
+      {/* Moved AlertsModal here to ensure it's on top of everything and not clipped by header/tables */}
+      <AlertsModal
+        isOpen={isAlertPopupOpen}
+        onClose={() => setIsAlertPopupOpen(false)}
+        alerts={alerts}
+      />
 
       <OnboardingModal
         isOpen={needsSetup && activeTab !== 'configuracoes'}

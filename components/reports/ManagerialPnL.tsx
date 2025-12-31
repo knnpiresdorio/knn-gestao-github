@@ -171,11 +171,11 @@ const ManagerialPnL = ({ data, settings }: { data: any[], settings: any }) => {
             {/* HEADER */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl ${currentThemeBg} text-white shadow-lg transform -rotate-3`}>
-                        <TrendingUp size={28} />
+                    <div className={`w-12 h-12 rounded-xl ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                        <TrendingUp size={24} />
                     </div>
                     <div>
-                        <h3 className="text-2xl font-bold text-slate-800 dark:text-white">DRE Gerencial</h3>
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">DRE Gerencial</h2>
                         <p className="text-sm text-slate-500 dark:text-slate-400">Modelo Margem de Contribuição e EBITDA</p>
                     </div>
                 </div>

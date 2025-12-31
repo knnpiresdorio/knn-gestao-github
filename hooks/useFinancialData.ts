@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { formatMonthLabel, formatDateDisplay, getDefaultDates, parseDateString } from '../utils/dates';
-import { formatBRL, sortData, SortConfig } from '../utils/formatters';
+import { formatBRL, sortData, SortConfig, parseCurrency } from '../utils/formatters';
+import { calculateAverageTicket, calculateTicketDistribution } from '../utils/studentMetrics';
 
 export const useFinancialData = (processedData: any[], dataByPeriod: any[], studentsData: any[], startDate: string, endDate: string) => {
     // --- STATE ---
@@ -219,31 +220,11 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         const inadimplenciaLast3Months = last3MonthsVencido > 0 ? (last3MonthsInad / last3MonthsVencido) * 100 : 0;
         const inadimplenciaLast12Months = last12MonthsVencido > 0 ? (last12MonthsInad / last12MonthsVencido) * 100 : 0;
 
-        // Ticket Médio (Revenue Based)
-        const activeStudentsCount = studentsData.filter((s: any) => s.status === 'Ativo').length;
-        const ticketMedioRevenue = activeStudentsCount > 0 ? (sumMensalidadesPago / activeStudentsCount) : 0;
-
-        // Ticket Médio (New - Contract Based from 'Base Geral Alunos')
-        const activeContracts = studentsData.filter((s: any) => s.vigente === true || s.vigente === 'TRUE');
-        let sumContractValue = 0;
-        const ticketDistribution = { upto250: 0, range251to350: 0, range351to450: 0, above450: 0, total: 0 };
-
-        activeContracts.forEach((s: any) => {
-            if (!s.currentValue) return;
-            const valStr = String(s.currentValue).replace('R$', '').trim().replace(/\./g, '').replace(',', '.');
-            const val = parseFloat(valStr) || 0;
-            sumContractValue += val;
-
-            if (val <= 250) ticketDistribution.upto250++;
-            else if (val <= 350) ticketDistribution.range251to350++;
-            else if (val <= 450) ticketDistribution.range351to450++;
-            else ticketDistribution.above450++;
-        });
-        ticketDistribution.total = activeContracts.length;
-        const ticketMedioContracts = activeContracts.length > 0 ? (sumContractValue / activeContracts.length) : 0;
-
-        // Use Contract-based as primary Ticket Medio
-        const ticketMedio = ticketMedioContracts > 0 ? ticketMedioContracts : ticketMedioRevenue;
+        // Ticket Médio & Distribution (Using synchronized utils)
+        const activeBaseStudents = studentsData.filter((s: any) => s.activeFlag === 1 || s.enrolledFlag === 1);
+        const ticketMedio = calculateAverageTicket(activeBaseStudents);
+        const ticketDistribution = calculateTicketDistribution(activeBaseStudents);
+        const activeStudentsCount = activeBaseStudents.length;
 
         // Stable Monthly Ticket (Last 3 Months Average)
         const ticketMedioStable = activeStudentsCount > 0 && sumMensalidadesLast3Months > 0
@@ -254,17 +235,71 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
 
 
 
-        // Cumulative Balance Evolution
-        let acc = 0;
-        const sortedDays = Object.keys(dailyBalance).sort();
-        const balanceEvolutionCumulative = sortedDays.map(date => {
-            acc += dailyBalance[date];
-            return {
-                date: date.split('-').slice(1).reverse().join('/'),
-                realized: acc,
-                projected: acc
-            };
+        // 1. Initial Balance & Global Total (All-time context)
+        const periodStartTs = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
+        const periodEndTs = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
+
+        let cumulativeRealized = 0;
+        let cumulativeProjected = 0;
+        let totalMoneyCalculated = 0; // True balance as of TODAY
+
+        processedData.forEach((item: any) => {
+            if (item.status === 'Cancelado' || item.type === 'Info' || !item.ts) return;
+            const val = item.type === 'Entrada' ? item.absVal : -item.absVal;
+
+            // Global Realized today
+            if (item.status === 'Pago' && item.dateObj && item.dateObj <= today) {
+                totalMoneyCalculated += val;
+            }
+
+            // Historical context for the chart
+            if (item.ts < periodStartTs) {
+                if (item.status === 'Pago') {
+                    cumulativeRealized += val;
+                    cumulativeProjected += val;
+                } else if (item.status === 'Pendente' || item.status === 'Atrasado') {
+                    cumulativeProjected += val;
+                }
+            }
         });
+
+        // 2. Map day-to-day movements within the SELECTED range
+        const periodRealized: Record<string, number> = {};
+        const periodProjected: Record<string, number> = {};
+
+        processedData.forEach((item: any) => {
+            if (item.ts >= periodStartTs && item.ts <= periodEndTs && item.status !== 'Cancelado' && item.type !== 'Info' && item.dateObj) {
+                const day = format(item.dateObj, 'yyyy-MM-dd');
+                const val = item.type === 'Entrada' ? item.absVal : -item.absVal;
+
+                if (item.status === 'Pago') {
+                    periodRealized[day] = (periodRealized[day] || 0) + val;
+                }
+                periodProjected[day] = (periodProjected[day] || 0) + val;
+            }
+        });
+
+        // 3. Generate smooth daily timeline for the chart
+        const balanceEvolutionCumulative: any[] = [];
+        const iter = new Date(periodStartTs);
+        const endIter = new Date(periodEndTs > today.getTime() + (365 * 24 * 3600 * 1000) ? today.getTime() : periodEndTs); // Cap at 1 year ahead if range is too large
+
+        // Safety break
+        let safetyCount = 0;
+        while (iter <= endIter && safetyCount < 730) {
+            const dayKey = format(iter, 'yyyy-MM-dd');
+            cumulativeRealized += (periodRealized[dayKey] || 0);
+            cumulativeProjected += (periodProjected[dayKey] || 0);
+
+            balanceEvolutionCumulative.push({
+                date: format(iter, 'dd/MM'),
+                realized: cumulativeRealized,
+                projected: cumulativeProjected,
+            });
+
+            iter.setDate(iter.getDate() + 1);
+            safetyCount++;
+        }
 
         const categoryChart = Object.keys(catMap).map(k => ({ name: k, value: catMap[k] })).sort((a, b) => b.value - a.value).slice(0, 5);
         const paymentMethodChart = Object.keys(payMap).map(k => ({ name: k, value: payMap[k] })).sort((a, b) => b.value - a.value);
@@ -318,8 +353,8 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
                 ticketMedio,
                 saidaPendente: saidaPendenteTotal // Sub for Saída (Pending+Overdue)
             },
-            financialIndicators: { cmPercent, breakEven, breakEvenStudents, margemContrib: cm, margemContribPercent: cmPercent, ticketDistribution },
-            currentBalanceToday: acc,
+            financialIndicators: { cmPercent, breakEven, breakEvenStudents, margemContrib: cm, margemContribPercent: cmPercent, ticketDistribution, ticketTotal: activeStudentsCount },
+            currentBalanceToday: totalMoneyCalculated,
             graphData: graphDataArray,
             balanceEvolution: balanceEvolutionCumulative,
             categoryChart,
