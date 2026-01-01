@@ -9,19 +9,20 @@ interface DrePageProps {
 
 const DrePage: React.FC<DrePageProps> = ({ dreData, settings, formatBRL }) => {
     return (
-        <div className="flex flex-col h-full animate-in fade-in duration-300">
+        <div className="p-6 md:p-8 flex flex-col gap-4 h-full animate-in fade-in duration-300">
             {/* HEADER */}
-            <div className="flex items-center gap-4 mb-6 shrink-0">
-                <div className={`w-12 h-12 rounded-xl bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-500/20`}>
-                    <Table size={24} />
+            {/* COMPACT HEADER */}
+            <div className="flex items-center gap-3 mb-2 shrink-0">
+                <div className={`w-10 h-10 rounded-lg bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-500/20`}>
+                    <Table size={20} />
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-white">Demonstração do Resultado Contábil</h2>
-                    <p className="text-sm text-slate-400">Análise detalhada de receitas e despesas por competência/caixa.</p>
+                <div className="flex flex-col">
+                    <h2 className="text-lg font-bold text-white leading-tight">Demonstração do Resultado Contábil</h2>
+                    <p className="text-xs font-medium text-slate-400">Análise detalhada de receitas e despesas por competência/caixa.</p>
                 </div>
             </div>
 
-            <div className="bg-[#0b101a] rounded-2xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col flex-1 min-h-0 relative">
+            <div className="bg-[#0b101a] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col flex-1 min-h-0 relative">
                 {/* Custom Scrollbar Container */}
                 <div className="overflow-auto custom-scrollbar flex-1 relative">
                     <table className="w-full text-sm text-left whitespace-nowrap">
@@ -53,8 +54,8 @@ const DrePage: React.FC<DrePageProps> = ({ dreData, settings, formatBRL }) => {
                             {Object.keys(dreData.recipes).sort().map((cat, idx) => (
                                 <tr key={cat} className="hover:bg-slate-800/30 transition-colors group">
                                     <td className="px-6 py-3 font-medium text-slate-300 sticky left-0 bg-[#0b101a] group-hover:bg-[#111827] z-20 transition-colors text-xs">{cat}</td>
-                                    {dreData.months.map((m: any) => <td key={m} className="px-6 py-3 text-right font-mono text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{formatBRL(dreData.recipes[cat][m] || 0, settings.showCents, settings.privacyMode)}</td>)}
-                                    <td className="px-6 py-3 text-right font-bold text-[#10b981] sticky right-0 bg-[#0b101a] group-hover:bg-[#111827] z-20 shadow-[-10px_0_20px_-5px_rgba(0,0,0,0.8)] font-mono text-xs border-l border-slate-800/50">{formatBRL(Object.values(dreData.recipes[cat]).reduce((a: any, b: any) => a + b, 0), settings.showCents, settings.privacyMode)}</td>
+                                    {dreData.months.map((m: any) => <td key={m} className="px-6 py-3 text-right font-mono text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{formatBRL((dreData.recipes[cat][m] as number) || 0, settings.showCents, settings.privacyMode)}</td>)}
+                                    <td className="px-6 py-3 text-right font-bold text-[#10b981] sticky right-0 bg-[#0b101a] group-hover:bg-[#111827] z-20 shadow-[-10px_0_20px_-5px_rgba(0,0,0,0.8)] font-mono text-xs border-l border-slate-800/50">{formatBRL(Object.values(dreData.recipes[cat]).reduce((a: any, b: any) => a + b, 0) as number, settings.showCents, settings.privacyMode)}</td>
                                 </tr>
                             ))}
 
@@ -75,8 +76,8 @@ const DrePage: React.FC<DrePageProps> = ({ dreData, settings, formatBRL }) => {
                             {Object.keys(dreData.expenses).sort().map((cat, idx) => (
                                 <tr key={cat} className="hover:bg-slate-800/30 transition-colors group">
                                     <td className="px-6 py-3 font-medium text-slate-300 sticky left-0 bg-[#0b101a] group-hover:bg-[#111827] z-20 transition-colors text-xs">{cat}</td>
-                                    {dreData.months.map((m: any) => <td key={m} className="px-6 py-3 text-right font-mono text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{formatBRL(dreData.expenses[cat][m] || 0, settings.showCents, settings.privacyMode)}</td>)}
-                                    <td className="px-6 py-3 text-right font-bold text-[#f43f5e] sticky right-0 bg-[#0b101a] group-hover:bg-[#111827] z-20 shadow-[-10px_0_20px_-5px_rgba(0,0,0,0.8)] font-mono text-xs border-l border-slate-800/50">{formatBRL(Object.values(dreData.expenses[cat]).reduce((a: any, b: any) => a + b, 0), settings.showCents, settings.privacyMode)}</td>
+                                    {dreData.months.map((m: any) => <td key={m} className="px-6 py-3 text-right font-mono text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{formatBRL((dreData.expenses[cat][m] as number) || 0, settings.showCents, settings.privacyMode)}</td>)}
+                                    <td className="px-6 py-3 text-right font-bold text-[#f43f5e] sticky right-0 bg-[#0b101a] group-hover:bg-[#111827] z-20 shadow-[-10px_0_20px_-5px_rgba(0,0,0,0.8)] font-mono text-xs border-l border-slate-800/50">{formatBRL(Object.values(dreData.expenses[cat]).reduce((a: any, b: any) => a + b, 0) as number, settings.showCents, settings.privacyMode)}</td>
                                 </tr>
                             ))}
 

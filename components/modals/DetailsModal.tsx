@@ -29,7 +29,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ message, onClose }) => {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className={`px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between ${config.bg}`}>
                     <div className="flex items-center gap-3">

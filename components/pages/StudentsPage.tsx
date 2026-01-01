@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     GraduationCap, Search, ChevronDown, X, FileSearch, RefreshCw, ArrowUp, ArrowDown
 } from 'lucide-react';
@@ -67,6 +67,18 @@ const StudentsPage: React.FC<StudentsPageProps> = ({
 
     const currentThemeBg = THEME_BG_COLORS[settings.themeColor] || 'bg-slate-900';
 
+    // Calculate Status Totals for the Summary Bar
+    const statusTotals = useMemo(() => {
+        const totals: Record<string, number> = {};
+        studentsData.forEach((student: any) => {
+            const s = student.status || 'Outros';
+            // Summing Pending and Overdue for Financial Volume of the status
+            const val = (student.totalPending || 0) + (student.totalOverdue || 0);
+            totals[s] = (totals[s] || 0) + val;
+        });
+        return totals;
+    }, [studentsData]);
+
     const getStatusStyle = (status: string) => STATUS_STYLES[status] || STATUS_STYLES['Default'];
 
     const renderSortableHeader = (label: string, key: string, align: 'left' | 'center' | 'right' = 'left') => {
@@ -85,20 +97,21 @@ const StudentsPage: React.FC<StudentsPageProps> = ({
     };
 
     return (
-        <div ref={studentsScrollRef} className="space-y-6 animate-in fade-in duration-300 h-full overflow-y-auto pb-20 custom-scrollbar">
+        <div ref={studentsScrollRef} className="p-6 md:p-8 space-y-6 animate-in fade-in duration-300 h-full overflow-y-auto pb-20 custom-scrollbar">
             {/* HEADER - MATCH DASHBOARD STYLE */}
-            <div className="flex items-center gap-4 mb-6 shrink-0">
-                <div className={`w-12 h-12 rounded-xl ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
-                    <GraduationCap size={24} />
+            {/* HEADER - COMPACT LAYOUT */}
+            <div className="flex items-center gap-3 mb-2 shrink-0">
+                <div className={`w-10 h-10 rounded-lg ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                    <GraduationCap size={20} />
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Alunos & Matrículas</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Gestão financeira por aluno e acompanhamento de parcelas.</p>
+                <div className="flex flex-col">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Alunos & Matrículas</h2>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Gestão financeira por aluno e acompanhamento de parcelas.</p>
                 </div>
             </div>
 
             {/* MAIN CONTENT CONTAINER */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 shrink-0 z-10">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 shrink-0 z-10">
 
                 {/* TABS NAVIGATION */}
                 <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-700 mb-6">
@@ -119,7 +132,7 @@ const StudentsPage: React.FC<StudentsPageProps> = ({
                 {activeTab === 'dashboard' ? (
                     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-500">
                         {/* STUDENT KPIS */}
-                        <StudentsKpiGrid metrics={studentMetrics} settings={settings} retentionStats={retentionStats} />
+                        <StudentsKpiGrid metrics={studentMetrics} settings={settings} retentionStats={retentionStats} loading={loading} />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
                             <ScholarshipChart data={scholarshipData} settings={settings} />
@@ -130,7 +143,7 @@ const StudentsPage: React.FC<StudentsPageProps> = ({
                 ) : (
                     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-500">
                         {/* FILTERS SECTION - Redesigned to match premium UI */}
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 shrink-0 space-y-6">
+                        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 shrink-0 space-y-6">
                             {/* ROW 1: Search & Main Status */}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                                 <div className="lg:col-span-4 space-y-2">
@@ -187,47 +200,82 @@ const StudentsPage: React.FC<StudentsPageProps> = ({
                                         ))}
 
                                         <div className="flex items-center gap-1.5 ml-auto pl-4 border-l border-slate-200 dark:border-slate-800 hidden xl:flex">
-                                            <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">{studentsData.length}</span>
-                                            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tighter whitespace-nowrap">de {totalDatasetCount} Registros</span>
+                                            <span className="text-[12px] font-black text-slate-700 dark:text-slate-200">{studentsData.length}</span>
+                                            <span className="text-[12px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter whitespace-nowrap">de {totalDatasetCount} Registros</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* ROW 2: Segment Filters */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Livro / Estágio</label>
-                                    <div className="relative">
-                                        <select value={studentFilters.book || 'Todos'} onChange={(e) => { setStudentFilters((s: any) => ({ ...s, book: e.target.value })); setCurrentPage(1); }} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white appearance-none cursor-pointer shadow-sm">
-                                            <option value="Todos">Todos</option>
-                                            {uniqueOptions?.books.map(b => <option key={b} value={b}>{b}</option>)}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><ChevronDown size={16} /></div>
+                            {/* ROW 2: Segment Filters & Totals */}
+                            <div className="flex flex-col xl:flex-row gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Livro / Estágio</label>
+                                        <div className="relative">
+                                            <select value={studentFilters.book || 'Todos'} onChange={(e) => { setStudentFilters((s: any) => ({ ...s, book: e.target.value })); setCurrentPage(1); }} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white appearance-none cursor-pointer shadow-sm">
+                                                <option value="Todos">Todos</option>
+                                                {uniqueOptions?.books.map(b => <option key={b} value={b}>{b}</option>)}
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><ChevronDown size={16} /></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Período de Contrato</label>
+                                        <div className="relative">
+                                            <select value={studentFilters.period || 'Todos'} onChange={(e) => { setStudentFilters((s: any) => ({ ...s, period: e.target.value })); setCurrentPage(1); }} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white appearance-none cursor-pointer shadow-sm">
+                                                <option value="Todos">Todos</option>
+                                                {uniqueOptions?.periods.map(p => <option key={p} value={p}>{p}</option>)}
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><ChevronDown size={16} /></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Dia do Vencimento</label>
+                                        <div className="relative">
+                                            <select value={studentFilters.day || 'Todos'} onChange={(e) => { setStudentFilters((s: any) => ({ ...s, day: e.target.value })); setCurrentPage(1); }} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white appearance-none cursor-pointer shadow-sm">
+                                                <option value="Todos">Todos</option>
+                                                {uniqueOptions?.days.map(d => <option key={d} value={d}>Dia {d}</option>)}
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><ChevronDown size={16} /></div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Período de Contrato</label>
-                                    <div className="relative">
-                                        <select value={studentFilters.period || 'Todos'} onChange={(e) => { setStudentFilters((s: any) => ({ ...s, period: e.target.value })); setCurrentPage(1); }} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white appearance-none cursor-pointer shadow-sm">
-                                            <option value="Todos">Todos</option>
-                                            {uniqueOptions?.periods.map(p => <option key={p} value={p}>{p}</option>)}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><ChevronDown size={16} /></div>
-                                    </div>
-                                </div>
+                                {/* TOTALS DISPLAY - MATCH DATABASE PAGE STYLE */}
+                                {statusTotals && (
+                                    <div className="flex-none xl:w-auto w-full flex flex-col justify-end">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Resumo Financeiro (Aberto + Atrasado)</label>
+                                        <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 flex gap-4 overflow-x-auto custom-scrollbar h-[44px] items-center">
+                                            {Object.entries(statusTotals).sort((a, b) => b[1] - a[1]).map(([status, total]) => {
+                                                if (total === 0) return null;
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block ml-1">Dia do Vencimento</label>
-                                    <div className="relative">
-                                        <select value={studentFilters.day || 'Todos'} onChange={(e) => { setStudentFilters((s: any) => ({ ...s, day: e.target.value })); setCurrentPage(1); }} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white appearance-none cursor-pointer shadow-sm">
-                                            <option value="Todos">Todos</option>
-                                            {uniqueOptions?.days.map(d => <option key={d} value={d}>Dia {d}</option>)}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><ChevronDown size={16} /></div>
+                                                let colorClass = '';
+                                                const s = status.toLowerCase();
+
+                                                if (['cancelado', 'trancado', 'evadido', 'desistente', 'outros'].includes(s)) {
+                                                    colorClass = 'text-slate-500 dark:text-slate-400';
+                                                } else if (['inadimplente', 'atrasado'].includes(s)) {
+                                                    colorClass = 'text-amber-500 dark:text-amber-400';
+                                                } else {
+                                                    // Ativo, Matriculado, Concluído -> Green
+                                                    colorClass = 'text-emerald-600 dark:text-emerald-400';
+                                                }
+
+                                                return (
+                                                    <div key={status} className="flex flex-col px-2 min-w-[80px] border-r border-slate-200 dark:border-slate-800 last:border-0 justify-center">
+                                                        <span className="text-[8px] font-bold text-slate-400 uppercase truncate leading-none mb-0.5">{status}</span>
+                                                        <span className={`text-xs font-bold whitespace-nowrap leading-none ${colorClass}`}>
+                                                            {formatBRL(total, settings.showCents, settings.privacyMode)}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </div>
 

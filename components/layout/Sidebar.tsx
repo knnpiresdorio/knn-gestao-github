@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                 {activeTab !== 'students' && (
                     isSidebarOpen ? (
-                        <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 animate-in slide-in-from-left-2 duration-300">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-100 dark:border-slate-800/50 animate-in slide-in-from-left-2 duration-300">
                             <div className="flex items-center gap-2 mb-4 text-slate-500 dark:text-slate-400">
                                 <CalendarDays size={16} />
                                 <span className="text-xs font-bold uppercase tracking-wider">Período de Análise</span>

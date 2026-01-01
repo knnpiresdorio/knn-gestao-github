@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Calendar, Search, BarChart2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Database, Calendar, Search, BarChart2, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import TablePagination from '../common/TablePagination';
 import StatusBadge from '../common/StatusBadge';
 import CategoryBadge from '../common/CategoryBadge';
@@ -80,6 +80,25 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
         return processedData.filter(i => i.source === 'geral').length;
     }, [processedData, dbTab]);
 
+    const hasActiveFilters = React.useMemo(() => {
+        return (
+            searchTerm !== '' ||
+            statusFilter !== 'Todos' ||
+            (categoryFilter && categoryFilter !== 'Todas') ||
+            (accountFilter && accountFilter !== 'Todas') ||
+            (paymentMethodFilter && paymentMethodFilter !== 'Todas')
+        );
+    }, [searchTerm, statusFilter, categoryFilter, accountFilter, paymentMethodFilter]);
+
+    const handleClearFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('Todos');
+        if (setCategoryFilter) setCategoryFilter('Todas');
+        if (setAccountFilter) setAccountFilter('Todas');
+        if (setPaymentMethodFilter) setPaymentMethodFilter('Todas');
+        setCurrentPage(1);
+    };
+
     const renderSortableHeader = (label: string, key: string, sortConfig: SortConfig[], setSort: any, align: string = 'left') => {
         const sortItem = sortConfig.find(s => s.key === key);
         const index = sortConfig.findIndex(s => s.key === key);
@@ -97,15 +116,16 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
     };
 
     return (
-        <div className="flex flex-col h-full animate-in fade-in duration-300">
+        <div className="p-6 md:p-8 flex flex-col gap-4 h-full animate-in fade-in duration-300">
             {/* HEADER - MATCH DASHBOARD STYLE */}
-            <div className="flex items-center gap-4 mb-6 shrink-0">
-                <div className={`w-12 h-12 rounded-xl ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
-                    <Database size={24} />
+            {/* HEADER - COMPACT LAYOUT */}
+            <div className="flex items-center gap-3 mb-2 shrink-0">
+                <div className={`w-10 h-10 rounded-lg ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                    <Database size={20} />
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Base de Dados</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Visualize, busque e filtre todas as transações da planilha.</p>
+                <div className="flex flex-col">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Base de Dados</h2>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Visualize, busque e filtre todas as transações da planilha.</p>
                 </div>
             </div>
 
@@ -114,11 +134,13 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                 <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full xl:w-auto mb-8">
                     <div className="flex flex-col w-full sm:w-auto text-center sm:text-left">
                         {/* Contador de Registros */}
-                        <div className="flex items-baseline justify-center sm:justify-start gap-1">
-                            <span className="font-bold text-slate-800 dark:text-white text-2xl">{tableData.length}</span>
-                            <span className="text-sm font-medium text-slate-500">de {totalDatasetCount}</span>
+                        <div className="flex flex-col">
+                            <div className="flex items-baseline justify-center sm:justify-start gap-2">
+                                <span className="font-bold text-slate-800 dark:text-white text-3xl">{tableData.length}</span>
+                                <span className="text-sm font-medium text-slate-500">de {totalDatasetCount}</span>
+                                <span className="text-[10px] uppercase font-bold text-slate-400">Registros Exibidos</span>
+                            </div>
                         </div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400">Registros Exibidos</span>
 
                         {/* Indicador de Filtro de Data (azul pequeno) */}
                         {(startDate || endDate) && (
@@ -230,6 +252,15 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                                                 {st}
                                             </button>
                                         ))}
+
+                                        {hasActiveFilters && (
+                                            <button
+                                                onClick={handleClearFilters}
+                                                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-[10px] font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all uppercase border border-transparent whitespace-nowrap"
+                                            >
+                                                <RotateCcw size={14} /> LIMPAR
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -238,7 +269,19 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                                     <div className="flex-shrink-0 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex gap-4 overflow-x-auto custom-scrollbar max-w-full">
                                         {Object.entries(financialsTotals).sort((a, b) => b[1] - a[1]).map(([status, total]) => {
                                             if (total === 0) return null;
-                                            const colorClass = total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+
+                                            let colorClass = '';
+                                            const s = status.toLowerCase();
+
+                                            if (['cancelado', 'trancado', 'evadido'].includes(s)) {
+                                                colorClass = 'text-slate-500 dark:text-slate-400';
+                                            } else if (['atrasado', 'pendente', 'não pago', 'nao pago'].includes(s)) {
+                                                colorClass = 'text-amber-500 dark:text-amber-400';
+                                            } else {
+                                                // Default for 'Pago' or others: Green if positive, Red if negative
+                                                colorClass = total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+                                            }
+
                                             return (
                                                 <div key={status} className="flex flex-col px-2 min-w-[100px] border-r border-slate-200 dark:border-slate-800 last:border-0">
                                                     <span className="text-[9px] font-bold text-slate-400 uppercase truncate">{status}</span>

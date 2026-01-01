@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
     ArrowUpRight, ArrowDownRight, Wallet, Percent, Scale, AlertTriangle, Receipt, Activity,
-    Calendar, DollarSign, CreditCard, Bell, BarChart2, Gauge // Added Gauge
+    Calendar, DollarSign, CreditCard, Bell, BarChart2, Gauge, TrendingUp, TrendingDown, AlertCircle, Users, UserMinus, LayoutDashboard // Added Gauge, Users, UserMinus, LayoutDashboard
 } from 'lucide-react';
 
 import KpiCard from '../dashboard/KpiCard';
@@ -32,12 +32,15 @@ interface DashboardPageProps {
     formatBRL: (val: number, showCents: boolean, privacyMode: boolean) => string;
     graphFilters: any;
     onClearFilters: () => void;
+    onQuickFilter?: (status: string) => void;
+    loading?: boolean;
 }
 
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
     stats,
     financialIndicators,
+    loading,
     settings,
 
     growth,
@@ -52,13 +55,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     dashboardLists,
     formatBRL,
     graphFilters,
-    onClearFilters
+    onClearFilters,
+    onQuickFilter
 }) => {
     const isGraphFiltered = (graphFilters.status !== 'all' && graphFilters.status !== 'Todos') || graphFilters.search !== '';
     const currentThemeBg = THEME_BG_COLORS[settings.themeColor] || 'bg-slate-900';
 
+    const breakEvenGrowth = financialIndicators.breakEvenQuarterlyPrev > 0
+        ? ((financialIndicators.breakEvenQuarterly - financialIndicators.breakEvenQuarterlyPrev) / financialIndicators.breakEvenQuarterlyPrev) * 100
+        : 0;
+
+    // Derived stats for splitting
+    const entradasPendingStrict = stats.pendente - stats.atrasado;
+    const saidasPendingStrict = stats.saidaPendente - stats.saidaAtrasado;
+
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 h-full overflow-y-auto pb-20 custom-scrollbar">
+        <div className="p-6 md:p-8 space-y-6 animate-in fade-in duration-500 h-full overflow-y-auto pb-20 custom-scrollbar">
+            {/* HEADER - COMPACT LAYOUT */}
+            <div className="flex items-center gap-3 mb-2 shrink-0">
+                <div className={`w-10 h-10 rounded-lg ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                    <LayoutDashboard size={20} />
+                </div>
+                <div className="flex flex-col">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Dashboard de Indicadores</h2>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Visão 360º dos principais KPIs e métricas do negócio.</p>
+                </div>
+            </div>
             {isGraphFiltered && (
                 <div className={`${currentThemeBg} text-white px-4 py-3 rounded-xl flex items-center justify-between shadow-lg`}>
                     <div className="flex items-center gap-2 text-sm font-medium"><BarChart2 size={18} /><span>Filtro Ativo: <strong>{graphFilters.status}</strong> {graphFilters.search && `+ "${graphFilters.search}"`}</span></div>
@@ -66,143 +88,217 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <KpiCard label="Entradas (Pagas)" value={formatBRL(stats.entrada, settings.showCents, settings.privacyMode)} sub={`Pendente + Atrasado: ${formatBRL(stats.pendente, settings.showCents, settings.privacyMode)}`} icon={ArrowUpRight} color="emerald" highlight highlightColor="bg-emerald-600 dark:bg-emerald-700" theme={settings.themeColor} tooltipText="Total de receitas que foram efetivamente recebidas no período." growth={growth.entrada} />
-                <KpiCard label="Saídas (Pagas)" value={formatBRL(stats.saida, settings.showCents, settings.privacyMode)} sub={`Pendente + Atrasado: ${formatBRL(stats.saidaPendente || 0, settings.showCents, settings.privacyMode)}`} icon={ArrowDownRight} color="rose" highlight highlightColor="bg-rose-600 dark:bg-rose-700" theme={settings.themeColor} tooltipText="Total de despesas pagas. Subtítulo mostra despesas não pagas." growth={growth.saida} />
-                <KpiCard label="Saldo Líquido" value={formatBRL(stats.saldo, settings.showCents, settings.privacyMode)} sub="Entradas Pagas - Saídas Pagas" icon={Wallet} color="blue" highlight theme={settings.themeColor} tooltipText="Diferença entre entradas recebidas e saídas pagas no período." />
-                <KpiCard
-                    label="Saúde Financeira"
-                    value={
-                        <div className="flex items-baseline gap-2">
-                            {stats.saudeFinanceira.toFixed(1)}%
-                            <span className="text-sm font-bold text-slate-500 dark:text-slate-400">
-                                ({formatBRL(stats.saldo, settings.showCents, settings.privacyMode)})
-                            </span>
-                        </div>
-                    }
-                    sub={
-                        <div className="flex flex-col leading-tight mt-1">
-                            <span className="text-[10px] sm:text-xs font-medium opacity-90">
-                                {stats.saudeFinanceira > 25 ? 'Altamente Eficiente' : stats.saudeFinanceira > 10 ? 'Operação Saudável' : 'Alerta Crítico'}
-                            </span>
-                        </div>
-                    }
-                    icon={Activity}
-                    color={stats.saudeFinanceira > 25 ? 'emerald' : stats.saudeFinanceira > 10 ? 'amber' : 'red'}
-                    theme={settings.themeColor}
-                    tooltipText={
-                        <div className="space-y-1 pt-1">
-                            <div className="flex items-start gap-2 text-[10px]">
-                                <span className="text-emerald-400 font-bold whitespace-nowrap">&gt; 25%:</span>
-                                <span>Altamente eficiente.</span>
+            <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+                {/* KPI GRID */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KpiCard
+                        label="ENTRADAS (PAGAS)"
+                        value={formatBRL(stats.entrada, settings.showCents, settings.privacyMode)}
+                        growth={growth?.entrada || 0.0}
+                        sub={
+                            <div className="flex gap-1 mt-2 text-[10px] font-bold uppercase items-center">
+                                <span className="text-slate-500">PENDENTE:</span>
+                                <span className="text-slate-400">{formatBRL(entradasPendingStrict, settings.showCents, settings.privacyMode)}</span>
+                                <span className="text-slate-600 mx-1">/</span>
+                                <span className="text-rose-400">ATRASADO:</span>
+                                <span className="text-rose-400">{formatBRL(stats.atrasado, settings.showCents, settings.privacyMode)}</span>
                             </div>
-                            <div className="flex items-start gap-2 text-[10px]">
-                                <span className="text-amber-400 font-bold whitespace-nowrap">10-25%:</span>
-                                <span>Saudável.</span>
-                            </div>
-                            <div className="flex items-start gap-2 text-[10px]">
-                                <span className="text-rose-400 font-bold whitespace-nowrap">&lt; 10%:</span>
-                                <span>Crítico.</span>
-                            </div>
-                        </div>
-                    }
-                />
+                        }
+                        icon={TrendingUp}
+                        color="emerald"
+                        highlight={true}
+                        theme={settings.themeColor}
+                        tooltipText="Total de entradas confirmadas (status 'Pago'). Pendentes e Atrasados listados abaixo."
+                        loading={loading}
+                    />
 
-                <KpiCard
-                    label="Margem de Contribuição"
-                    value={`${financialIndicators.margemContribPercent.toFixed(1)}%`}
-                    sub={formatBRL(financialIndicators.margemContrib, settings.showCents, settings.privacyMode)}
-                    icon={Gauge}
-                    color={financialIndicators.margemContribPercent > 50 ? 'emerald' : financialIndicators.margemContribPercent > 30 ? 'amber' : 'red'}
-                    theme={settings.themeColor}
-                    tooltipText="Percentual da receita que sobra após pagar os custos variáveis. Ideal > 30%."
-                />
+                    <KpiCard
+                        label="SAÍDAS (PAGAS)"
+                        value={formatBRL(stats.saida, settings.showCents, settings.privacyMode)}
+                        growth={growth?.saida || 0.0}
+                        sub={
+                            <div className="flex gap-1 mt-2 text-[10px] font-bold uppercase items-center">
+                                <span className="text-slate-500">PENDENTE:</span>
+                                <span className="text-slate-400">{formatBRL(saidasPendingStrict, settings.showCents, settings.privacyMode)}</span>
+                                <span className="text-slate-600 mx-1">/</span>
+                                <span className="text-rose-400">ATRASADO:</span>
+                                <span className="text-rose-400">{formatBRL(stats.saidaAtrasado, settings.showCents, settings.privacyMode)}</span>
+                            </div>
+                        }
+                        icon={TrendingDown} // Image shows arrow down-right, normally trending-down but let's stick to generic or adjust if icon available
+                        color="rose"
+                        highlight={true}
+                        theme={settings.themeColor}
+                        tooltipText="Total de saídas realizadas (status 'Pago'). Pendentes e Atrasados listados abaixo."
+                        loading={loading}
+                    />
 
-                <KpiCard
-                    label="Ponto de Equilíbrio"
-                    value={formatBRL(financialIndicators.breakEven, settings.showCents, settings.privacyMode)}
-                    sub={
-                        <div className="flex flex-col gap-2 w-full mt-2">
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 dark:text-slate-400">
-                                    Necessários: <strong className="text-slate-700 dark:text-white">{financialIndicators.breakEvenStudents} Alunos</strong>
+
+                    <KpiCard
+                        label="SALDO LÍQUIDO"
+                        value={formatBRL(stats.saldo, settings.showCents, settings.privacyMode)}
+                        sub="ENTRADAS PAGAS - SAÍDAS PAGAS"
+                        icon={Wallet}
+                        color={stats.saldo >= 0 ? 'blue' : 'orange'} // Image shows blue for negative? No, typically orange/red for negative, but text color might handle it. Image shows white value.
+                        highlight={true}
+                        theme={settings.themeColor}
+                        loading={loading}
+                        tooltipText="Resultado financeiro simples (Entradas - Saídas) do período."
+                    />
+
+                    <KpiCard
+                        label="SAÚDE FINANCEIRA"
+                        value={
+                            <div className="flex items-baseline gap-2">
+                                <span>{stats.saudeFinanceira.toFixed(1)}%</span>
+                                <span className="text-lg text-slate-400 font-medium">({formatBRL(stats.saldo, settings.showCents, settings.privacyMode)})</span>
+                            </div>
+                        }
+                        icon={Activity}
+                        color="rose" // Image shows reddish background/icon
+                        theme={settings.themeColor}
+                        tooltipText="Lucratividade percentual (Saldo / Entradas * 100)."
+                        subElement={
+                            <span className={`text-[10px] font-bold uppercase mt-2 block ${stats.saudeFinanceira > 20 ? 'text-emerald-400' : stats.saudeFinanceira > 0 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                {stats.saudeFinanceira > 20 ? 'EXCELENTE' : stats.saudeFinanceira > 0 ? 'ALERTA' : 'ALERTA CRÍTICO'}
+                            </span>
+                        }
+                        loading={loading}
+                    />
+
+                    <KpiCard
+                        label="Margem de Contribuição"
+                        value={`${financialIndicators.margemContribPercent.toFixed(1)}%`}
+                        sub={formatBRL(financialIndicators.margemContrib, settings.showCents, settings.privacyMode)}
+                        icon={Gauge}
+                        color={financialIndicators.margemContribPercent > 50 ? 'emerald' : financialIndicators.margemContribPercent > 30 ? 'amber' : 'red'}
+                        theme={settings.themeColor}
+                        tooltipText="Percentual da receita que sobra após pagar os custos variáveis. Ideal > 30%."
+                        loading={loading}
+                    />
+
+                    <KpiCard
+                        label="Ponto de Equilíbrio"
+                        value={formatBRL(financialIndicators.breakEvenQuarterly, settings.showCents, settings.privacyMode)}
+                        loading={loading}
+                        sub={
+                            <div className="flex flex-col gap-2 w-full mt-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Média Trimestral</span>
+                                    {breakEvenGrowth !== null && (
+                                        <span className={`text-[10px] font-bold ${breakEvenGrowth > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                            {breakEvenGrowth > 0 ? '+' : ''}{breakEvenGrowth.toFixed(1)}% vs anterior
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-slate-500 dark:text-slate-400">
+                                        Necessários: <strong className="text-slate-700 dark:text-white">{financialIndicators.breakEvenQuarterlyStudents?.toFixed(0) || 0} Alunos</strong>
+                                    </span>
+                                </div>
+
+                                <div className="flex gap-3 items-start">
+                                    <div className="flex-1 flex flex-col gap-1">
+                                        <div className="relative w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                            {/* Marker at 100% (50% position) */}
+                                            <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-slate-900/10 dark:bg-white/20 z-10"></div>
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 ${stats.entrada >= financialIndicators.breakEvenQuarterly ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                                                style={{ width: `${Math.min(((stats.entrada / (financialIndicators.breakEvenQuarterly || 1)) * 100) / 2, 100)}%` }}
+                                            />
+                                        </div>
+                                        <div className="flex justify-between text-[10px] text-slate-400 font-medium">
+                                            <span>0%</span>
+                                            <span className="text-center">100%</span>
+                                            <span className="text-right">200%</span>
+                                        </div>
+                                    </div>
+                                    <span className={`text-xs font-black leading-none ${stats.entrada >= financialIndicators.breakEvenQuarterly ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                                        {((stats.entrada / (financialIndicators.breakEvenQuarterly || 1)) * 100).toFixed(0)}%
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                        icon={Scale}
+                        color={stats.entrada >= financialIndicators.breakEvenQuarterly ? 'emerald' : 'rose'}
+                        theme={settings.themeColor}
+                        tooltipText="Ponto de equilíbrio calculado pela média dos últimos 3 meses (Custos Fixos / Margem Contribuição)."
+                    />
+
+
+                    <KpiCard
+                        label="Taxa de Inadimplência"
+                        value={null}
+                        loading={loading}
+                        headerAction={
+                            onQuickFilter && (
+                                <button
+                                    onClick={() => onQuickFilter('Atrasado')}
+                                    className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-md transition-colors"
+                                >
+                                    VER
+                                </button>
+                            )
+                        }
+                        sub={
+                            <div className="flex flex-col w-full mt-0 gap-4">
+                                <div className="grid grid-cols-4 w-full divide-x divide-slate-200 dark:divide-slate-700/50">
+                                    <div className="flex flex-col items-center justify-end px-1">
+                                        <span className="text-lg sm:text-xl xl:text-2xl font-black text-slate-800 dark:text-white leading-none mb-1 truncate">{stats.inadimplenciaCurrentMonth.toFixed(1)}%</span>
+                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400">Atual</span>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-end px-1">
+                                        <span className="text-xs sm:text-sm font-bold leading-none mb-1 text-slate-600 dark:text-slate-300 truncate">{stats.inadimplenciaLast3Months.toFixed(1)}%</span>
+                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400 text-center">3 M</span>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-end px-1">
+                                        <span className="text-xs sm:text-sm font-bold leading-none mb-1 text-slate-600 dark:text-slate-300 truncate">{stats.inadimplenciaLast12Months.toFixed(1)}%</span>
+                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400 text-center">12 M</span>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-end px-1">
+                                        <span className="text-xs sm:text-sm font-bold leading-none mb-1 text-slate-600 dark:text-slate-300 truncate">{stats.inadimplencia.toFixed(1)}%</span>
+                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400 text-center">Geral</span>
+                                    </div>
+                                </div>
+                                <span className="font-bold text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 w-full text-center border-t border-slate-100 dark:border-slate-800 pt-2 truncate">
+                                    {stats.countInadimplencia} parcelas atrasadas (geral)
                                 </span>
                             </div>
+                        }
+                        icon={AlertTriangle}
+                        color={stats.inadimplencia <= 5 ? 'emerald' : stats.inadimplencia <= 10 ? 'amber' : 'red'}
+                        theme={settings.themeColor}
+                        settings={settings}
+                        tooltipText="Inadimplência: Geral / Mês Atual / Últimos 3 Meses / Últimos 12 Meses"
+                    />
+                    <TicketMedioCard
+                        activeStudents={financialIndicators.ticketTotal}
+                        metrics={{
+                            ticketDistribution: financialIndicators.ticketDistribution,
+                            avgTicket: stats.ticketMedio
+                        }}
+                        settings={settings}
+                        formatBRL={formatBRL}
+                        loading={loading}
 
-                            <div className="flex gap-3 items-start">
-                                <div className="flex-1 flex flex-col gap-1">
-                                    <div className="relative w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                        {/* Marker at 100% (50% position) */}
-                                        <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-slate-900/10 dark:bg-white/20 z-10"></div>
-                                        <div
-                                            className={`h-full rounded-full transition-all duration-500 ${stats.entrada >= financialIndicators.breakEven ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                                            style={{ width: `${Math.min(((stats.entrada / (financialIndicators.breakEven || 1)) * 100) / 2, 100)}%` }}
-                                        />
-                                    </div>
-                                    <div className="flex justify-between text-[10px] text-slate-400 font-medium">
-                                        <span>0%</span>
-                                        <span className="text-center">100%</span>
-                                        <span className="text-right">200%</span>
-                                    </div>
-                                </div>
-                                <span className={`text-xs font-black leading-none ${stats.entrada >= financialIndicators.breakEven ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                                    {((stats.entrada / (financialIndicators.breakEven || 1)) * 100).toFixed(0)}%
-                                </span>
-                            </div>
-                        </div>
-                    }
-                    icon={Scale}
-                    color={stats.entrada >= financialIndicators.breakEven ? 'emerald' : 'rose'}
-                    theme={settings.themeColor}
-                    tooltipText="Faturamento e alunos necessários para cobrir todos os custos (Lucro Zero)."
-                />
+                        allowQuarterlyView={true}
+                        allowChartToggle={false}
+                        quarterlyData={financialIndicators.quarterlyTickets}
+                        currentQuarterValue={financialIndicators.ticketMedioQuarterlyCurrent}
 
-                <KpiCard
-                    label="Inadimplência"
-                    value=""
-                    sub={
-                        <div className="flex flex-col w-full mt-0 gap-4">
-                            <div className="grid grid-cols-4 w-full divide-x divide-slate-200 dark:divide-slate-700/50">
-                                <div className="flex flex-col items-center justify-end px-1">
-                                    <span className="text-lg sm:text-xl xl:text-2xl font-black text-slate-800 dark:text-white leading-none mb-1 truncate">{stats.inadimplenciaCurrentMonth.toFixed(1)}%</span>
-                                    <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400">Atual</span>
-                                </div>
-                                <div className="flex flex-col items-center justify-end px-1">
-                                    <span className="text-xs sm:text-sm font-bold leading-none mb-1 text-slate-600 dark:text-slate-300 truncate">{stats.inadimplenciaLast3Months.toFixed(1)}%</span>
-                                    <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400 text-center">3 M</span>
-                                </div>
-                                <div className="flex flex-col items-center justify-end px-1">
-                                    <span className="text-xs sm:text-sm font-bold leading-none mb-1 text-slate-600 dark:text-slate-300 truncate">{stats.inadimplenciaLast12Months.toFixed(1)}%</span>
-                                    <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400 text-center">12 M</span>
-                                </div>
-                                <div className="flex flex-col items-center justify-end px-1">
-                                    <span className="text-xs sm:text-sm font-bold leading-none mb-1 text-slate-600 dark:text-slate-300 truncate">{stats.inadimplencia.toFixed(1)}%</span>
-                                    <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400 text-center">Geral</span>
-                                </div>
-                            </div>
-                            <span className="font-bold text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 w-full text-center border-t border-slate-100 dark:border-slate-800 pt-2 truncate">
-                                {stats.countInadimplencia} parcelas atrasadas (geral)
-                            </span>
-                        </div>
-                    }
-                    icon={AlertTriangle}
-                    color={stats.inadimplencia <= 5 ? 'emerald' : stats.inadimplencia <= 10 ? 'amber' : 'red'}
-                    theme={settings.themeColor}
-                    settings={settings}
-                    tooltipText="Inadimplência: Geral / Mês Atual / Últimos 3 Meses / Últimos 12 Meses"
-                />
-                <TicketMedioCard
-                    value={stats.ticketMedio}
-                    distribution={financialIndicators.ticketDistribution}
-                    activeCount={financialIndicators.ticketTotal}
-                    showChart={false}
-                    settings={settings}
-                />
+                        // Fallbacks for compatibility
+                        value={stats.ticketMedio}
+                        distribution={financialIndicators.ticketDistribution}
+                        activeCount={financialIndicators.ticketTotal}
+                        showChart={false}
+                    />
 
+                </div>
             </div>
 
             <div className="flex flex-col gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
                     <div className="flex flex-col mb-6">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">Fluxo de Caixa Mensal</h3>
                         <span className="text-xs text-slate-400 font-normal mt-1 flex items-center gap-1"><Calendar size={12} /> {periodLabel}</span>
@@ -226,7 +322,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors relative">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors relative">
                     <div className="absolute top-6 right-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-xl p-3 flex flex-col items-end z-10">
                         <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><DollarSign size={10} /> Saldo Hoje</div>
                         <div className={`text-lg font-black ${currentBalanceToday >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{formatBRL(currentBalanceToday, settings.showCents, settings.privacyMode)}</div>
@@ -262,7 +358,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Top Despesas</h3>
                     <div className="h-64 flex items-center">
                         <div className="flex-1 h-full min-w-0">
@@ -295,7 +391,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         </div>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><CreditCard size={18} className="text-purple-500" /> Formas de Pagamento</h3>
                     <div className="h-64 flex items-center">
                         <div className="flex-1 h-full min-w-0">
@@ -331,7 +427,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
 
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 overflow-hidden flex flex-col">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 overflow-hidden flex flex-col">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">

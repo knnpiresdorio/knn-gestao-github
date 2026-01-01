@@ -9,9 +9,9 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, BarChart2, CreditCard, Activity,
   LayoutDashboard, Settings, Check, RotateCcw, X, CalendarDays,
   Save, Eye, EyeOff, Moon, Sun, Palette, DollarSign,
-  Info, Layers, Database, Shield, XCircle,
+  Info, Layers, Shield, XCircle,
   Receipt, AlertTriangle, Table, Bell, Clock, UserX, LucideIcon, Lock, ArrowUp, ArrowDown,
-  Download, Percent, Scale, GraduationCap, FileSearch, LogOut, Upload, FileText, ChevronDown, FileSpreadsheet
+  Download, Percent, Scale, GraduationCap, FileSearch, LogOut, Upload, ChevronDown
 } from 'lucide-react';
 import AlertsModal from './components/AlertsModal';
 import Sidebar from './components/layout/Sidebar';
@@ -102,7 +102,8 @@ const App = () => {
     currentPage: dbPage, setCurrentPage: setDbPage,
     itemsPerPage: dbItems, setItemsPerPage: setDbItems,
     financialsTotals,
-    uniqueOptions: dbUniqueOptions
+    uniqueOptions: dbUniqueOptions,
+    handleApplyFilters
   } = useDatabaseData(processedData, startDate, endDate, dbTab);
 
   const { user, loading: authLoading, signOut, initialize } = useAuthStore();
@@ -175,26 +176,7 @@ const App = () => {
   const currentThemeBg = THEME_BG_COLORS[settings.themeColor] || 'bg-violet-600';
   const getStatusStyle = (status: string) => STATUS_STYLES[status] || STATUS_STYLES['Default'];
 
-  // Helper function to render data source badge
-  const getSourceBadge = () => {
-    const source = (settings as any).dataSource || 'google_sheets';
 
-    const styles: any = {
-      google_sheets: { icon: FileSpreadsheet, color: 'text-emerald-600 dark:text-emerald-400', label: 'Planilha Conectada' },
-      supabase: { icon: Database, color: 'text-cyan-600 dark:text-cyan-400', label: 'Banco Supabase' },
-      csv: { icon: FileText, color: 'text-blue-600 dark:text-blue-400', label: 'Arquivo CSV' }
-    };
-
-    const current = styles[source] || styles.google_sheets;
-    const Icon = current.icon;
-
-    return (
-      <div className="hidden md:flex items-center gap-2 text-xs font-medium bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full transition-colors order-first">
-        <Icon size={12} className={current.color} />
-        <span className={current.color}>{current.label}</span>
-      </div>
-    );
-  };
 
   const handleSort = (key: string, currentSort: SortConfig[], setSort: (s: SortConfig[] | ((prev: SortConfig[]) => SortConfig[])) => void) => {
     setSort((prev: SortConfig[]) => {
@@ -213,23 +195,10 @@ const App = () => {
   };
 
 
-
-  // --- RENDER GUARDS ---
-  if (authLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-bold text-slate-500 animate-pulse">Carregando sistema...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Not Logged In
-  if (!user) {
-    return <LoginPage />;
-  }
+  const handleQuickFilter = (status: string) => {
+    setActiveTab('database');
+    setDbStatus(status);
+  };
 
   return (
     <div className={`${settings.darkMode ? 'dark' : ''} flex h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden transition-colors duration-300`}>
@@ -257,42 +226,51 @@ const App = () => {
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shadow-sm z-10 transition-colors duration-300 shrink-0">
           <div className="flex items-center gap-4">
+            {/* BREADCRUMBS */}
             <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <span className="font-medium text-slate-900 dark:text-white capitalize">{activeTab === 'dre' ? 'DRE' : activeTab === 'database' ? 'Base de Dados' : activeTab === 'expenses' ? 'Despesas' : activeTab === 'students' ? 'Alunos' : activeTab}</span>
+              <span className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+                KNN Gestão
+              </span>
               <ChevronRight size={14} />
-              <span className={`font-bold text-${settings.themeColor}-600 dark:text-${settings.themeColor}-400`}>{settings.sheetName}</span>
+              <span className="font-bold text-slate-800 dark:text-white capitalize">
+                {activeTab === 'dashboard' ? 'Dashboard'
+                  : activeTab === 'database' ? 'Base de Dados'
+                    : activeTab === 'dre_gerencial' ? 'DRE Gerencial'
+                      : activeTab === 'dre' ? 'DRE Contábil'
+                        : activeTab === 'expenses' ? 'Controle de Despesas'
+                          : activeTab === 'students' ? 'Alunos & Matrículas'
+                            : 'Configurações'}
+              </span>
             </div>
 
-            {['dashboard', 'database', 'dre', 'expenses', 'students', 'configuracoes'].includes(activeTab) && (
-              <>
-                {getSourceBadge()}
+            {/* LAST UPDATED */}
+            {['dashboard', 'database', 'dre', 'expenses', 'students', 'configuracoes', 'dre_gerencial'].includes(activeTab) && lastUpdated && (
+              <div className="flex items-center gap-4">
                 <div className="hidden md:flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
-                  <Database size={12} />
-                  <span>Analisando <strong>{graphData.length}</strong> de <strong>{processedData.length}</strong></span>
+                  <Clock size={12} />
+                  <span>Atualizado em: <strong>{lastUpdated}</strong></span>
                 </div>
-                {lastUpdated && (
-                  <div className="hidden md:flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
-                    <Clock size={12} />
-                    <span>Atualizado em: <strong>{lastUpdated}</strong></span>
+
+                {activeTab === 'dre_gerencial' && (
+                  <div className="hidden md:flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-full">
+                    <AlertTriangle size={12} />
+                    <span>Aviso: Dados Gerenciais</span>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
+            {/* ALERTS */}
             {['dashboard', 'database', 'dre', 'expenses', 'students', 'configuracoes'].includes(activeTab) && alerts.length > 0 && (
-              <>
-                <button
-                  onClick={() => setIsAlertPopupOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-full animate-pulse hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-                >
-                  <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400" />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
-                    {alerts.length} Vencimentos Próximos
-                  </span>
-                </button>
-
-
-              </>
+              <button
+                onClick={() => setIsAlertPopupOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-full animate-pulse hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+              >
+                <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400" />
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                  {alerts.length} Vencimentos Próximos
+                </span>
+              </button>
             )}
           </div>
           <div className="flex items-center gap-4">
@@ -320,12 +298,13 @@ const App = () => {
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden relative flex flex-col p-6 md:p-8 bg-slate-50 dark:bg-slate-950 transition-colors">
+        <div className="flex-1 overflow-hidden relative flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors">
           {activeTab === 'dashboard' && (
             <DashboardPage
               stats={stats}
               financialIndicators={financialIndicators}
               settings={settings}
+              loading={loading} // Pass loading state
               growth={growth}
               graphData={graphData}
               periodLabel={periodLabel}
@@ -339,6 +318,7 @@ const App = () => {
               formatBRL={formatBRL}
               graphFilters={graphFilters}
               onClearFilters={handleClearFilters}
+              onQuickFilter={handleQuickFilter}
             />
           )}
 

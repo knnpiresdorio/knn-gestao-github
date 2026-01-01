@@ -51,6 +51,10 @@ export const useAppData = () => {
 
         if (error) throw error;
 
+        if (data && data.length > 0) {
+            setTenants(prev => [...prev, data[0]]);
+        }
+
         await fetchTenants();
         return data?.[0];
     };
@@ -64,6 +68,33 @@ export const useAppData = () => {
                 .select();
 
             if (error) throw error;
+
+            if (data && data.length > 0) {
+                const updatedTenant = data[0];
+                setTenants(prev => prev.map(t => String(t.id) === String(id) ? updatedTenant : t));
+
+                // If we updated the currently selected tenant, update the settings
+                if (String(settings.tenantId) === String(id)) {
+                    setSettings(prev => ({
+                        ...prev,
+                        spreadsheetId: updatedTenant.spreadsheet_id,
+                        sheetName: updatedTenant.sheet_name || DEFAULT_CONFIG.sheetName,
+                        geralSheetId: updatedTenant.geral_sheet_id || DEFAULT_CONFIG.geralSheetId,
+                        geralSheetName: updatedTenant.geral_sheet_name || DEFAULT_CONFIG.geralSheetName,
+                        schoolName: updatedTenant.name,
+                        themeColor: updatedTenant.theme_color || DEFAULT_CONFIG.themeColor
+                    }));
+                    setFormSettings(prev => ({
+                        ...prev,
+                        spreadsheetId: updatedTenant.spreadsheet_id,
+                        sheetName: updatedTenant.sheet_name || DEFAULT_CONFIG.sheetName,
+                        geralSheetId: updatedTenant.geral_sheet_id || DEFAULT_CONFIG.geralSheetId,
+                        geralSheetName: updatedTenant.geral_sheet_name || DEFAULT_CONFIG.geralSheetName,
+                        schoolName: updatedTenant.name,
+                        themeColor: updatedTenant.theme_color || DEFAULT_CONFIG.themeColor
+                    }));
+                }
+            }
 
             await fetchTenants();
             return data?.[0];
@@ -82,12 +113,15 @@ export const useAppData = () => {
 
             if (error) throw error;
 
+            // Update local state immediately
+            setTenants(prev => prev.filter(t => String(t.id) !== String(id)));
+
             // If we deleted the current tenant, clear settings
-            if (settings.tenantId === id) {
+            if (String(settings.tenantId) === String(id)) {
                 const emptySettings = { ...DEFAULT_CONFIG, csvContent: '', csvGeralContent: '' };
                 setSettings(emptySettings);
                 setFormSettings(emptySettings);
-            } else if (formSettings.tenantId === id) {
+            } else if (String(formSettings.tenantId) === String(id)) {
                 // If we deleted the unit currently selected in the form dropdown
                 setFormSettings(prev => ({ ...prev, tenantId: '' }));
             }
@@ -103,9 +137,27 @@ export const useAppData = () => {
     useEffect(() => {
         if (tenants.length === 0) return;
 
+        // Auto-select first tenant if none selected
+        if (!settings.tenantId && settings.dataSource === 'google_sheets') {
+            const firstTenant = tenants[0];
+            const newSettings = {
+                ...settings,
+                spreadsheetId: firstTenant.spreadsheet_id,
+                sheetName: firstTenant.sheet_name || DEFAULT_CONFIG.sheetName,
+                geralSheetId: firstTenant.geral_sheet_id || DEFAULT_CONFIG.geralSheetId,
+                geralSheetName: firstTenant.geral_sheet_name || DEFAULT_CONFIG.geralSheetName,
+                schoolName: firstTenant.name,
+                themeColor: firstTenant.theme_color || DEFAULT_CONFIG.themeColor,
+                tenantId: firstTenant.id
+            };
+            setSettings(newSettings);
+            setFormSettings(newSettings);
+            return;
+        }
+
         // 1. Sync Active Settings
         if (settings.tenantId) {
-            const activeTenant = tenants.find(t => t.id === settings.tenantId);
+            const activeTenant = tenants.find(t => String(t.id) === String(settings.tenantId));
             if (activeTenant) {
                 const refreshed = {
                     ...settings,
@@ -124,7 +176,7 @@ export const useAppData = () => {
 
         // 2. Sync Form Settings (dropdown selection)
         if (formSettings.tenantId) {
-            const selectedTenant = tenants.find(t => t.id === formSettings.tenantId);
+            const selectedTenant = tenants.find(t => String(t.id) === String(formSettings.tenantId));
             if (selectedTenant) {
                 const refreshed = {
                     ...formSettings,
@@ -140,7 +192,7 @@ export const useAppData = () => {
                 }
             }
         }
-    }, [tenants, settings.tenantId, formSettings.tenantId]);
+    }, [tenants, settings, formSettings, settings.dataSource]);
 
     // --- DATA FETCHING ---
     const needsSetup = useMemo(() => {

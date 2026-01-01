@@ -9,7 +9,10 @@ export const DEFAULT_CONFIG = {
     showCents: true,
     privacyMode: false,
     themeColor: 'violet',
-    dataSource: 'google_sheets' // 'google_sheets' | 'csv'
+    dataSource: 'google_sheets' as 'google_sheets' | 'csv', // 'google_sheets' | 'csv'
+    tenantId: '',
+    csvContent: '',
+    csvGeralContent: ''
 };
 
 export const THEME_BG_COLORS: Record<string, string> = {

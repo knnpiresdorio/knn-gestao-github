@@ -9,10 +9,24 @@ interface PaymentDayChartProps {
 }
 
 const PaymentDayChart: React.FC<PaymentDayChartProps> = ({ data, settings }) => {
+    // Calculate total value
+    const totalValue = data.reduce((acc, curr) => acc + curr.value, 0);
+
     return (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 h-full flex flex-col">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Dias de Pagamento</h3>
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-4 -mt-3 ml-1">Alunos Ativos e Matriculados</p>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 h-full flex flex-col">
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-white">Dias de Pagamento</h3>
+                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-2 -mt-0.5 ml-0.5">Alunos Ativos e Matriculados</p>
+                </div>
+                <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Valor Total Previsto</span>
+                    <span className="text-lg font-black text-emerald-500 dark:text-emerald-400">
+                        {formatBRL(totalValue, settings?.showCents ?? true, settings?.privacyMode ?? false)}
+                    </span>
+                </div>
+            </div>
+
             <div className="flex-1 min-h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

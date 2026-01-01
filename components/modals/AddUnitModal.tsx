@@ -62,7 +62,7 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({ isOpen, onClose, onSave, in
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-violet-100 dark:bg-violet-900/30 text-violet-600 rounded-2xl">
+                        <div className="p-3 bg-violet-100 dark:bg-violet-900/30 text-violet-600 rounded-xl">
                             <Building2 size={24} />
                         </div>
                         <div>
@@ -169,25 +169,7 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({ isOpen, onClose, onSave, in
                         </div>
                     </div>
 
-                    {/* Theme Color Selection */}
-                    <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Cor de Identificação</label>
-                        <div className="flex gap-3">
-                            {['blue', 'violet', 'emerald', 'rose', 'amber'].map(color => (
-                                <button
-                                    key={color}
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, theme_color: color })}
-                                    className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center ${formData.theme_color === color
-                                        ? `bg-${color}-500 text-white shadow-lg ring-4 ring-${color}-500/20 ring-offset-2 dark:ring-offset-slate-900`
-                                        : `bg-${color}-100 dark:bg-${color}-900/20 text-${color}-600 hover:scale-110`
-                                        }`}
-                                >
-                                    {formData.theme_color === color && <Save size={16} />}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+
 
                     {/* Footer */}
                     <div className="pt-6 flex gap-3 justify-end">

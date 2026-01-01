@@ -71,20 +71,21 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
     };
 
     return (
-        <div className="flex flex-col h-full animate-in fade-in duration-300">
+        <div className="p-6 md:p-8 flex flex-col gap-4 h-full animate-in fade-in duration-300">
             {/* HEADER */}
-            <div className="flex items-center gap-4 mb-6 shrink-0">
-                <div className={`w-12 h-12 rounded-xl ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
-                    <Wallet size={24} />
+            {/* COMPACT HEADER */}
+            <div className="flex items-center gap-3 mb-2 shrink-0">
+                <div className={`w-10 h-10 rounded-lg ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                    <Wallet size={20} />
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Controle de Despesas</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Controle detalhado de despesas fixas e variáveis.</p>
+                <div className="flex flex-col">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Controle de Despesas</h2>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Controle detalhado de despesas fixas e variáveis.</p>
                 </div>
             </div>
 
             {/* FILTERS & TABS */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 mb-6 shrink-0">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 mb-6 shrink-0">
                 {/* Filter Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                     <div className="space-y-2">
@@ -160,7 +161,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
             </div>
 
             {/* TABLE */}
-            <div ref={expensesTableTopRef} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1 min-h-0">
+            <div ref={expensesTableTopRef} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1 min-h-0">
                 {/* Table Header Row with Count */}
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
                     <div className="flex items-center gap-2">

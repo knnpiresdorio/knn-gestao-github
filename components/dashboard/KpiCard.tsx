@@ -16,9 +16,12 @@ export interface KpiCardProps {
     growth?: number | null;
     settings?: any;
     className?: string; // Allow external layout overrides
+    loading?: boolean;
+    subElement?: React.ReactNode;
+    headerAction?: React.ReactNode;
 }
 
-const KpiCard = memo(({ label, value, sub, icon: Icon, color, highlight, highlightColor, coloredBorder, theme, tooltipText, growth, className = "" }: KpiCardProps) => {
+const KpiCard = memo(({ label, value, sub, subElement, headerAction, icon: Icon, color, highlight, highlightColor, coloredBorder, theme, tooltipText, growth, className = "", loading }: KpiCardProps) => {
 
     // Enhanced color mapping for the premium look (matching TicketMedioCard logic)
     const getColorTheme = (c: string) => {
@@ -40,10 +43,29 @@ const KpiCard = memo(({ label, value, sub, icon: Icon, color, highlight, highlig
     const themeColors = getColorTheme(color);
     const bgClass = highlight ? themeColors.highlightBg : 'bg-slate-900/40 dark:bg-slate-900/40 border-white/10';
 
+    if (loading) {
+        return (
+            <div className={`relative bg-slate-900/40 backdrop-blur-xl rounded-xl p-6 border border-white/5 shadow-2xl overflow-hidden min-h-[160px] ${className}`}>
+                <div className="animate-pulse flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-800" />
+                            <div className="h-3 w-24 bg-slate-800 rounded" />
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <div className="h-8 w-32 bg-slate-800 rounded" />
+                        <div className="h-3 w-40 bg-slate-800 rounded" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className={`backdrop-blur-xl ${bgClass} rounded-3xl p-6 border shadow-2xl relative group flex flex-col justify-between transition-all hover:bg-slate-900/60 hover:border-white/20 min-h-[160px] ${className}`}>
+        <div className={`backdrop-blur-xl ${bgClass} rounded-xl p-6 border shadow-2xl relative group flex flex-col justify-between transition-all hover:bg-slate-900/60 hover:border-white/20 min-h-[160px] ${className}`}>
             {/* Background Decoration Layer - Ghost Icon */}
-            <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+            <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
                 <div className={`absolute -left-4 -bottom-8 opacity-[0.05] transform -rotate-12 transition-transform group-hover:scale-110 group-hover:-rotate-6 ${themeColors.ghost}`}>
                     <Icon size={180} strokeWidth={1.5} />
                 </div>
@@ -66,17 +88,25 @@ const KpiCard = memo(({ label, value, sub, icon: Icon, color, highlight, highlig
                                 </div>
                             )}
                         </div>
-
                     </div>
 
-                    {tooltipText && (
-                        <div className="group/info relative">
-                            <Info size={14} className="text-slate-500 hover:text-slate-300 transition-colors cursor-help" />
-                            <div className="absolute top-0 right-0 translate-x-2 -translate-y-full mb-3 w-56 p-3 bg-slate-800 backdrop-blur-md text-[10px] text-slate-200 rounded-xl opacity-0 group-hover/info:opacity-100 transition-all pointer-events-none z-[100] shadow-2xl border border-white/10 whitespace-normal leading-relaxed ring-1 ring-black/50">
-                                {tooltipText}
+                    <div className="flex items-center gap-2">
+                        {/* Header Action */}
+                        {headerAction && (
+                            <div className="z-20 relative">
+                                {headerAction}
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {tooltipText && (
+                            <div className="group/info relative">
+                                <Info size={14} className="text-slate-500 hover:text-slate-300 transition-colors cursor-help" />
+                                <div className="absolute top-0 right-0 translate-x-2 -translate-y-full mb-3 w-56 p-3 bg-slate-800 backdrop-blur-md text-[10px] text-slate-200 rounded-xl opacity-0 group-hover/info:opacity-100 transition-all pointer-events-none z-[100] shadow-2xl border border-white/10 whitespace-normal leading-relaxed ring-1 ring-black/50">
+                                    {tooltipText}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Main Value */}
@@ -87,6 +117,11 @@ const KpiCard = memo(({ label, value, sub, icon: Icon, color, highlight, highlig
                     {sub && (
                         <div className="text-[11px] text-slate-400 font-bold uppercase tracking-tight opacity-80 mt-1">
                             {sub}
+                        </div>
+                    )}
+                    {subElement && (
+                        <div className="mt-2 text-[10px]">
+                            {subElement}
                         </div>
                     )}
                 </div>

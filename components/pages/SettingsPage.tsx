@@ -38,23 +38,22 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const currentThemeBg = THEME_BG_COLORS[settings.themeColor] || 'bg-violet-600';
 
     return (
-        <div className="w-full h-full animate-in fade-in duration-300 flex flex-col">
-            <div className="flex items-center justify-between mb-8 shrink-0">
-                <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
-                        <Settings size={24} />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Configurações do Sistema</h2>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Gerencie a conexão de dados e preferências visuais.</p>
-                    </div>
+        <div className="p-6 md:p-8 w-full h-full animate-in fade-in duration-300 flex flex-col gap-4">
+            {/* COMPACT HEADER */}
+            <div className="flex items-center gap-3 mb-2 shrink-0">
+                <div className={`w-10 h-10 rounded-lg ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                    <Settings size={20} />
+                </div>
+                <div className="flex flex-col">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Configurações do Sistema</h2>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Gerencie a conexão de dados e preferências visuais.</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1 overflow-auto custom-scrollbar pb-20">
                 {/* FONTE DE DADOS (Main Column) */}
                 <div className="xl:col-span-2">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 h-full">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 h-full">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-8 flex items-center gap-3">
                             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg"><Database size={20} /></div>
                             <div>
@@ -91,7 +90,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                                     <div className="flex items-center gap-1.5">
                                                         <button
                                                             onClick={() => {
-                                                                const unit = tenants.find(t => t.id === formSettings.tenantId);
+                                                                const unit = tenants.find(t => String(t.id) === String(formSettings.tenantId));
                                                                 if (unit) {
                                                                     setEditingUnit(unit);
                                                                     setIsAddUnitModalOpen(true);
@@ -103,7 +102,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                                         </button>
                                                         <button
                                                             onClick={() => {
-                                                                const unit = tenants.find(t => t.id === formSettings.tenantId);
+                                                                const unit = tenants.find(t => String(t.id) === String(formSettings.tenantId));
                                                                 if (unit) {
                                                                     setDeletingUnit(unit);
                                                                     setIsDeleteModalOpen(true);
@@ -112,7 +111,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                                             className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-bold transition-all border border-rose-100 dark:border-rose-900/30"
                                                             title="Excluir Unidade"
                                                         >
-                                                            <Trash2 size={12} />
+                                                            <Trash2 size={12} /> Excluir Unidade
                                                         </button>
                                                     </div>
                                                 )}
@@ -130,8 +129,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         <div className="relative">
                                             <select
                                                 className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 dark:text-white appearance-none cursor-pointer"
+                                                value={formSettings.tenantId || ''}
                                                 onChange={(e) => {
-                                                    const selected = tenants.find(t => t.id === e.target.value);
+                                                    const selected = tenants.find(t => String(t.id) === String(e.target.value));
                                                     if (selected) {
                                                         setFormSettings((s: any) => ({
                                                             ...s,
@@ -150,7 +150,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                             >
                                                 <option value="">Selecione uma unidade...</option>
                                                 {tenants.map(t => (
-                                                    <option key={t.id} value={t.id} selected={formSettings.tenantId === t.id}>{t.name}</option>
+                                                    <option key={t.id} value={t.id}>{t.name}</option>
                                                 ))}
                                             </select>
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><ChevronDown size={16} /></div>
@@ -303,7 +303,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
                 {/* VISUAL & THEME (Side Column) */}
                 <div className="space-y-6">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-3">
                             <div className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-lg"><Palette size={20} /></div>
                             <div>
@@ -374,9 +374,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && deletingUnit && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-300">
                         <div className="p-8 text-center space-y-6">
-                            <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-rose-500/10">
+                            <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-xl flex items-center justify-center mx-auto shadow-lg shadow-rose-500/10">
                                 <AlertTriangle size={32} />
                             </div>
 
@@ -400,10 +400,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                 <button
                                     onClick={async () => {
                                         if (onDeleteTenant) {
-                                            await onDeleteTenant(deletingUnit.id);
-                                            setIsDeleteModalOpen(false);
-                                            setDeletingUnit(null);
-                                            alert('Unidade excluída com sucesso.');
+                                            try {
+                                                await onDeleteTenant(deletingUnit.id);
+                                                setIsDeleteModalOpen(false);
+                                                setDeletingUnit(null);
+                                                alert('Unidade excluída com sucesso.');
+                                            } catch (error: any) {
+                                                alert('Erro ao excluir unidade: ' + error.message);
+                                            }
                                         }
                                     }}
                                     className="flex-1 px-6 py-3 bg-rose-600 text-white text-sm font-bold rounded-xl hover:bg-rose-700 transition-all font-sans shadow-lg shadow-rose-500/20"

@@ -167,16 +167,16 @@ const ManagerialPnL = ({ data, settings }: { data: any[], settings: any }) => {
     const getRowAv = (id: string) => rows.find(r => r.id === id)?.av || 0;
 
     return (
-        <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 animate-in fade-in duration-300 h-full overflow-y-auto w-full">
+        <div className="p-6 md:p-8 flex-1 flex flex-col gap-4 bg-slate-50 dark:bg-slate-950 animate-in fade-in duration-300 h-full overflow-y-auto w-full">
             {/* HEADER */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
-                        <TrendingUp size={24} />
+            <div className="flex items-center justify-between gap-4 mb-2 shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                        <TrendingUp size={20} />
                     </div>
-                    <div>
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">DRE Gerencial</h2>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Modelo Margem de Contribuição e EBITDA</p>
+                    <div className="flex flex-col">
+                        <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">DRE Gerencial</h2>
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Modelo Margem de Contribuição e EBITDA</p>
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -237,7 +237,7 @@ const ManagerialPnL = ({ data, settings }: { data: any[], settings: any }) => {
                         bg: 'bg-emerald-50 dark:bg-emerald-900/20'
                     }
                 ].map((card, idx) => (
-                    <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+                    <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
                         <div className="flex justify-between items-start mb-3 relative z-10">
                             <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">{card.label}</h3>
                             <div className={`p-2 rounded-lg ${card.bg} ${card.color}`}><card.icon size={18} /></div>
@@ -266,7 +266,7 @@ const ManagerialPnL = ({ data, settings }: { data: any[], settings: any }) => {
             </div>
 
             {/* TABLE */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
                 <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-sm">
                         <thead>

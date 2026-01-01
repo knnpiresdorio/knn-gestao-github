@@ -35,13 +35,13 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onConfigure }
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 text-left">
-                        <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
                             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
                                 <Database size={20} />
                             </div>
                             <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Conecte Google Sheets ou suba um CSV</span>
                         </div>
-                        <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
                             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg">
                                 <Layout size={20} />
                             </div>
@@ -51,7 +51,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onConfigure }
 
                     <button
                         onClick={onConfigure}
-                        className="group relative w-full flex items-center justify-center gap-3 px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-lg font-black rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl hover:shadow-violet-500/20"
+                        className="group relative w-full flex items-center justify-center gap-3 px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-lg font-black rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl hover:shadow-violet-500/20"
                     >
                         Configurar Primeira Unidade
                         <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />

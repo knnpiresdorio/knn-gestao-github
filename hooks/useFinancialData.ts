@@ -121,16 +121,14 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
                     if (isInad) curMonthInad += val;
                 }
 
-                // 2. Last 3 Months (excluding current)
-                // Range: [last3Start, currentMonthStart)
-                if (item.dateObj >= last3MonthsStart && item.dateObj < currentMonthStart) {
+                // 2. Last 3 Months (Rolling - includes current month up to today)
+                if (item.dateObj >= last3MonthsStart) {
                     last3MonthsVencido += val;
                     if (isInad) last3MonthsInad += val;
                 }
 
-                // 3. Last 12 Months (excluding current)
-                // Range: [last12Start, currentMonthStart)
-                if (item.dateObj >= last12MonthsStart && item.dateObj < currentMonthStart) {
+                // 3. Last 12 Months (Rolling - includes current month up to today)
+                if (item.dateObj >= last12MonthsStart) {
                     last12MonthsVencido += val;
                     if (isInad) last12MonthsInad += val;
                 }
@@ -337,6 +335,96 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
             ? Math.ceil(breakEven / (ticketMedio > 0 ? ticketMedio : ticketMedioStable))
             : 0;
 
+        // --- NEW: QUARTERLY BREAK-EVEN & TICKET CALCS ---
+
+        // 1. Define Quarter Ranges
+        const qToday = new Date();
+        qToday.setHours(23, 59, 59, 999);
+        const currentQuarterStart = new Date(qToday);
+        currentQuarterStart.setDate(currentQuarterStart.getDate() - 90); // Last 90 Days approach as per request "Trimestral" often implies rolling interval for stability
+
+        const prevQuarterEnd = new Date(currentQuarterStart);
+        prevQuarterEnd.setDate(prevQuarterEnd.getDate() - 1);
+        const prevQuarterStart = new Date(prevQuarterEnd);
+        prevQuarterStart.setDate(prevQuarterStart.getDate() - 90);
+
+        // 2. Helper to calc metrics for a specific range
+        const calcQuarterMetrics = (start: Date, end: Date) => {
+            let qFixed = 0;
+            let qVar = 0;
+            let qRev = 0;
+
+            processedData.forEach((item: any) => {
+                if (item.status === 'Pago' && item.dateObj && item.dateObj >= start && item.dateObj <= end) {
+                    if (item.type === 'Entrada') {
+                        qRev += item.absVal;
+                    } else if (item.type === 'Saída') {
+                        if (item.classification === 'Fixa') qFixed += item.absVal;
+                        else if (item.classification === 'Variável') qVar += item.absVal;
+                    }
+                }
+            });
+
+            // Quarterly Average (Monthly view) -> Divide by 3
+            const avgFixed = qFixed / 3;
+            const avgRev = qRev / 3;
+            const avgVar = qVar / 3;
+
+            const qCmPercent = avgRev > 0 ? ((avgRev - avgVar) / avgRev) * 100 : 0;
+            const qBreakEven = qCmPercent > 0 ? (avgFixed / (qCmPercent / 100)) : 0;
+
+            return qBreakEven;
+        };
+
+        const breakEvenQuarterly = calcQuarterMetrics(currentQuarterStart, qToday);
+        const breakEvenQuarterlyPrev = calcQuarterMetrics(prevQuarterStart, prevQuarterEnd);
+
+        // Students needed based on CURRENT Active Ticket (Global)
+        const breakEvenQuarterlyStudents = ticketMedio > 0 ? Math.ceil(breakEvenQuarterly / ticketMedio) : 0;
+
+
+        // 3. Quarterly Ticket Medio (Calendar Quarters of Current Year)
+        const currentYearNum = qToday.getFullYear();
+        const quarterlyTickets = [];
+        let ticketMedioQuarterlyCurrent = 0;
+
+        for (let q = 1; q <= 4; q++) {
+            const qStart = new Date(currentYearNum, (q - 1) * 3, 1);
+            const qEnd = new Date(currentYearNum, q * 3, 0, 23, 59, 59); // Last day of quarter
+
+            if (qStart > qToday) break; // Future quarter
+
+            let qRevenue = 0;
+            let qActiveCount = 0; // Approximation: count distinct students paying in this period? 
+            // Better: Average ticket = Total Revenue (Tuition) / Count of Payments? 
+            // Or Avg Ticket = Sum(Active Students each month) / 3? 
+            // "Ticket Medio" usually = Faturamento / Numero de Vendas (ou Alunos Pagantes)
+
+            // Let's use: Sum of Tuition Payments / Count of Tuition Payments
+            let tuitionSum = 0;
+            let tuitionCount = 0;
+
+            processedData.forEach((item: any) => {
+                if (item.type === 'Entrada' && item.status === 'Pago' && item.dateObj && item.dateObj >= qStart && item.dateObj <= qEnd) {
+                    if ((item.cat || '').toLowerCase().includes('mensalidade')) {
+                        tuitionSum += item.absVal;
+                        tuitionCount++;
+                    }
+                }
+            });
+
+            const qAvg = tuitionCount > 0 ? tuitionSum / tuitionCount : 0;
+
+            if (qAvg > 0) {
+                quarterlyTickets.push({ label: `Q${q}`, value: qAvg });
+            }
+
+            // If this is the current running quarter (by date)
+            if (qToday >= qStart && qToday <= qEnd) {
+                ticketMedioQuarterlyCurrent = qAvg;
+            }
+        }
+
         return {
             stats: {
                 entrada,
@@ -351,9 +439,26 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
                 inadimplenciaLast12Months,
                 saudeFinanceira,
                 ticketMedio,
-                saidaPendente: saidaPendenteTotal // Sub for Saída (Pending+Overdue)
+                saidaPendente: saidaPendenteTotal, // Sub for Saída (Pending+Overdue)
+                saidaAtrasado: saidaAtrasado // New field
             },
-            financialIndicators: { cmPercent, breakEven, breakEvenStudents, margemContrib: cm, margemContribPercent: cmPercent, ticketDistribution, ticketTotal: activeStudentsCount },
+            financialIndicators: {
+                cmPercent,
+                breakEven,
+                breakEvenStudents, // Uses current ticket or stable fallback
+                margemContrib: cm,
+                margemContribPercent: cmPercent,
+                ticketDistribution,
+                ticketTotal: activeStudentsCount,
+
+                // --- NEW QUARTERLY METRICS ---
+                breakEvenQuarterly,
+                breakEvenQuarterlyPrev,
+                breakEvenQuarterlyStudents,
+
+                quarterlyTickets, // { label: 'Q1', value: 123 }
+                ticketMedioQuarterlyCurrent
+            },
             currentBalanceToday: totalMoneyCalculated,
             graphData: graphDataArray,
             balanceEvolution: balanceEvolutionCumulative,
@@ -381,6 +486,9 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
 
     // --- DASHBOARD LISTS ---
     const dashboardLists = useMemo(() => {
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
         const topDefaulters = studentsData
             .filter((s: any) => s.status === 'Inadimplente' || s.totalOverdue > 0)
             .sort((a: any, b: any) => b.totalOverdue - a.totalOverdue)
@@ -392,8 +500,33 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
             .slice(0, 10);
 
         const lastReceipts = processedData
-            .filter((i: any) => i.status === 'Pago' && i.type === 'Entrada')
-            .sort((a: any, b: any) => (b.ts || 0) - (a.ts || 0)) // Newest first
+            .filter((i: any) => {
+                if (i.status !== 'Pago' || i.type !== 'Entrada') return false;
+
+                // Parse Data Pagamento (dateExec)
+                let execTs = i.ts || 0;
+                if (i.dateExec && i.dateExec !== '-') {
+                    const parts = i.dateExec.split('/');
+                    if (parts.length === 3) execTs = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+                }
+
+                return execTs <= today.getTime();
+            })
+            .sort((a: any, b: any) => {
+                let tsA = a.ts || 0;
+                if (a.dateExec && a.dateExec !== '-') {
+                    const parts = a.dateExec.split('/');
+                    if (parts.length === 3) tsA = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+                }
+
+                let tsB = b.ts || 0;
+                if (b.dateExec && b.dateExec !== '-') {
+                    const parts = b.dateExec.split('/');
+                    if (parts.length === 3) tsB = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+                }
+
+                return tsB - tsA; // Newest first
+            })
             .slice(0, 10);
 
         return { topDefaulters, nextPayments, lastReceipts };

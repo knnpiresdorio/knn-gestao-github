@@ -10,7 +10,7 @@ interface ScholarshipChartProps {
 
 const ScholarshipChart: React.FC<ScholarshipChartProps> = ({ data, settings }) => {
     return (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 h-full flex flex-col">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 h-full flex flex-col">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Distribuição de Bolsas</h3>
             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-4 -mt-3 ml-1">Alunos Ativos e Matriculados</p>
             <div className="flex-1 min-h-[250px]">

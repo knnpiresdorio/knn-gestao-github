@@ -133,6 +133,10 @@ export const useDatabaseData = (processedData: any[], startDate: string, endDate
         return tableData.slice(start, start + itemsPerPage);
     }, [tableData, currentPage, itemsPerPage]);
 
+    const handleApplyFilters = () => {
+        // Placeholder for filter application logic if needed in future
+    };
+
     return {
         tableData,
         paginatedData,
@@ -145,6 +149,7 @@ export const useDatabaseData = (processedData: any[], startDate: string, endDate
         currentPage, setCurrentPage,
         itemsPerPage, setItemsPerPage,
         financialsTotals,
-        uniqueOptions
+        uniqueOptions,
+        handleApplyFilters
     };
 };
