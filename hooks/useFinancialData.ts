@@ -98,6 +98,10 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         const last3MonthsStart = new Date(today.getFullYear(), today.getMonth() - 3, 1);
         const last12MonthsStart = new Date(today.getFullYear(), today.getMonth() - 12, 1);
 
+        // Rolling 30 Days for "Atual" Inadimplencia (avoids 0% at start of month)
+        const last30DaysStart = new Date(today);
+        last30DaysStart.setDate(today.getDate() - 30);
+
         processedData.forEach((item: any) => {
             if (item.type !== 'Entrada' || item.status === 'Cancelado' || !item.dateObj) return;
 
@@ -115,8 +119,8 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
                     globalCountInadimplencia++;
                 }
 
-                // 1. Current Month (up to today - i.e. past due days in current month)
-                if (item.dateObj >= currentMonthStart) {
+                // 1. Current Snapshot (Last 30 Days) - Previously was Calendar Month
+                if (item.dateObj >= last30DaysStart) {
                     curMonthVencido += val;
                     if (isInad) curMonthInad += val;
                 }
@@ -383,8 +387,8 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         const breakEvenQuarterlyStudents = ticketMedio > 0 ? Math.ceil(breakEvenQuarterly / ticketMedio) : 0;
 
 
-        // 3. Quarterly Ticket Medio (Calendar Quarters of Current Year)
-        const currentYearNum = qToday.getFullYear();
+        // 3. Quarterly Ticket Medio (Calendar Quarters of Current Year or Filtered Year)
+        const currentYearNum = endDate ? new Date(endDate).getFullYear() : qToday.getFullYear();
         const quarterlyTickets = [];
         let ticketMedioQuarterlyCurrent = 0;
 
@@ -392,7 +396,7 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
             const qStart = new Date(currentYearNum, (q - 1) * 3, 1);
             const qEnd = new Date(currentYearNum, q * 3, 0, 23, 59, 59); // Last day of quarter
 
-            if (qStart > qToday) break; // Future quarter
+            // Removed the break for future quarters so all 4 always display
 
             let qRevenue = 0;
             let qActiveCount = 0; // Approximation: count distinct students paying in this period? 
@@ -405,7 +409,8 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
             let tuitionCount = 0;
 
             processedData.forEach((item: any) => {
-                if (item.type === 'Entrada' && item.status === 'Pago' && item.dateObj && item.dateObj >= qStart && item.dateObj <= qEnd) {
+                // Modified: Include 'Pendente' and 'Atrasado' for projection
+                if (item.type === 'Entrada' && ['Pago', 'Pendente', 'Atrasado'].includes(item.status) && item.dateObj && item.dateObj >= qStart && item.dateObj <= qEnd) {
                     if ((item.cat || '').toLowerCase().includes('mensalidade')) {
                         tuitionSum += item.absVal;
                         tuitionCount++;

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, ComposedChart, AreaChart, Area, ReferenceLine
@@ -11,7 +12,7 @@ import {
   Save, Eye, EyeOff, Moon, Sun, Palette, DollarSign,
   Info, Layers, Shield, XCircle,
   Receipt, AlertTriangle, Table, Bell, Clock, UserX, LucideIcon, Lock, ArrowUp, ArrowDown,
-  Download, Percent, Scale, GraduationCap, FileSearch, LogOut, Upload, ChevronDown
+  Download, Percent, Scale, GraduationCap, FileSearch, LogOut, Upload, ChevronDown, Loader2
 } from 'lucide-react';
 import AlertsModal from './components/AlertsModal';
 import Sidebar from './components/layout/Sidebar';
@@ -52,7 +53,35 @@ const App = () => {
 
   // --- STATE ---
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // --- STATE ---
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeTab = useMemo(() => {
+    const path = location.pathname;
+    if (path === '/' || path === '/dashboard') return 'dashboard';
+    if (path === '/students') return 'students';
+    if (path === '/expenses') return 'expenses';
+    if (path === '/dre') return 'dre';
+    if (path === '/dre-gerencial') return 'dre_gerencial';
+    if (path === '/database') return 'database';
+    if (path === '/settings') return 'configuracoes';
+    return 'dashboard';
+  }, [location.pathname]);
+
+  const handleSetActiveTab = (tab: string) => {
+    switch (tab) {
+      case 'dashboard': navigate('/'); break;
+      case 'students': navigate('/students'); break;
+      case 'expenses': navigate('/expenses'); break;
+      case 'dre': navigate('/dre'); break;
+      case 'dre_gerencial': navigate('/dre-gerencial'); break;
+      case 'database': navigate('/database'); break;
+      case 'configuracoes': navigate('/settings'); break;
+      default: navigate('/');
+    }
+  };
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAlertPopupOpen, setIsAlertPopupOpen] = useState(false);
   const [dbTab, setDbTab] = useState<'financial' | 'students'>('financial');
@@ -196,12 +225,24 @@ const App = () => {
 
 
   const handleQuickFilter = (status: string) => {
-    setActiveTab('database');
+    handleSetActiveTab('database');
     setDbStatus(status);
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-8 h-8 text-violet-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
-    <div className={`${settings.darkMode ? 'dark' : ''} flex h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden transition-colors duration-300`}>
+    <div className={`${settings.darkMode ? 'dark' : ''} flex h-screen bg-app-bg dark:bg-slate-950 font-sans text-text-primary dark:text-slate-100 overflow-hidden transition-colors duration-300`}>
       <style>{` .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 9999px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.8); } .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(75, 85, 99, 0.5); } .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.8); } `}</style>
 
       {/* SIDEBAR */}
@@ -209,7 +250,7 @@ const App = () => {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSetActiveTab}
         settings={settings}
         startDate={startDate}
         setStartDate={setStartDate}
@@ -224,15 +265,15 @@ const App = () => {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shadow-sm z-10 transition-colors duration-300 shrink-0">
+        <header className="h-16 bg-app-ui dark:bg-slate-900 border-b border-transparent dark:border-slate-800 flex items-center justify-between px-8 shadow-sm z-10 transition-colors duration-300 shrink-0">
           <div className="flex items-center gap-4">
             {/* BREADCRUMBS */}
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <span className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+            <div className="flex items-center gap-2 text-sm text-text-secondary dark:text-slate-400">
+              <span className="text-text-secondary hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300 transition-colors cursor-pointer" onClick={() => handleSetActiveTab('dashboard')}>
                 KNN Gestão
               </span>
               <ChevronRight size={14} />
-              <span className="font-bold text-slate-800 dark:text-white capitalize">
+              <span className="font-bold text-text-primary dark:text-white capitalize">
                 {activeTab === 'dashboard' ? 'Dashboard'
                   : activeTab === 'database' ? 'Base de Dados'
                     : activeTab === 'dre_gerencial' ? 'DRE Gerencial'
@@ -246,7 +287,7 @@ const App = () => {
             {/* LAST UPDATED */}
             {['dashboard', 'database', 'dre', 'expenses', 'students', 'configuracoes', 'dre_gerencial'].includes(activeTab) && lastUpdated && (
               <div className="flex items-center gap-4">
-                <div className="hidden md:flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
+                <div className="hidden md:flex items-center gap-2 text-xs font-medium text-text-secondary dark:text-slate-500 bg-app-ui dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
                   <Clock size={12} />
                   <span>Atualizado em: <strong>{lastUpdated}</strong></span>
                 </div>
@@ -264,10 +305,10 @@ const App = () => {
             {['dashboard', 'database', 'dre', 'expenses', 'students', 'configuracoes'].includes(activeTab) && alerts.length > 0 && (
               <button
                 onClick={() => setIsAlertPopupOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-full animate-pulse hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 bg-semantic-warning-bg dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-full animate-pulse hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
               >
-                <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400" />
-                <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                <AlertTriangle size={14} className="text-semantic-warning-text dark:text-amber-400" />
+                <span className="text-xs font-bold text-semantic-warning-text dark:text-amber-400">
                   {alerts.length} Vencimentos Próximos
                 </span>
               </button>
@@ -275,19 +316,19 @@ const App = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
-              <button onClick={() => setSettings(s => ({ ...s, privacyMode: !s.privacyMode }))} className="p-2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all" title={settings.privacyMode ? "Mostrar Valores" : "Ocultar Valores"}>{settings.privacyMode ? <EyeOff size={18} /> : <Eye size={18} />}</button>
-              <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} className="p-2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all" title={settings.darkMode ? "Modo Claro" : "Modo Escuro"}>{settings.darkMode ? <Moon size={18} /> : <Sun size={18} />}</button>
-              <button onClick={refreshData} disabled={loading} className={`p-2 rounded-lg transition-all ${loading ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-wait' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Atualizar Dados">
+              <button onClick={() => setSettings(s => ({ ...s, privacyMode: !s.privacyMode }))} className="p-2 text-text-secondary hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-app-ui dark:hover:bg-slate-800 rounded-lg transition-all" title={settings.privacyMode ? "Mostrar Valores" : "Ocultar Valores"}>{settings.privacyMode ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+              <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} className="p-2 text-text-secondary hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-app-ui dark:hover:bg-slate-800 rounded-lg transition-all" title={settings.darkMode ? "Modo Claro" : "Modo Escuro"}>{settings.darkMode ? <Moon size={18} /> : <Sun size={18} />}</button>
+              <button onClick={refreshData} disabled={loading} className={`p-2 rounded-lg transition-all ${loading ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-wait' : 'text-text-secondary hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-app-ui dark:hover:bg-slate-800'}`} title="Atualizar Dados">
                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
               </button>
             </div>
-            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">K</div>
+            <div className="w-8 h-8 rounded-full bg-app-ui dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-text-secondary dark:text-slate-400">K</div>
           </div>
         </header>
 
         {/* System Messages Section */}
         {messages && messages.length > 0 && (
-          <div className="px-6 md:px-8 py-4 bg-slate-50 dark:bg-slate-950 flex flex-col gap-3">
+          <div className="px-6 md:px-8 py-4 bg-app-bg dark:bg-slate-950 flex flex-col gap-3">
             {messages.map(msg => (
               <SystemAlert
                 key={msg.id}
@@ -298,143 +339,147 @@ const App = () => {
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden relative flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors">
-          {activeTab === 'dashboard' && (
-            <DashboardPage
-              stats={stats}
-              financialIndicators={financialIndicators}
-              settings={settings}
-              loading={loading} // Pass loading state
-              growth={growth}
-              graphData={graphData}
-              periodLabel={periodLabel}
-              currentBalanceToday={currentBalanceToday}
-              balanceEvolution={balanceEvolution}
-              categoryChart={categoryChart}
-              paymentMethodChart={paymentMethodChart}
-              dashboardListTab={dashboardListTab}
-              setDashboardListTab={setDashboardListTab}
-              dashboardLists={dashboardLists}
-              formatBRL={formatBRL}
-              graphFilters={graphFilters}
-              onClearFilters={handleClearFilters}
-              onQuickFilter={handleQuickFilter}
-            />
-          )}
+        <div className="flex-1 overflow-hidden relative flex flex-col bg-app-bg dark:bg-slate-950 transition-colors">
+          <Routes>
+            <Route path="/" element={
+              <DashboardPage
+                stats={stats}
+                financialIndicators={financialIndicators}
+                settings={settings}
+                loading={loading} // Pass loading state
+                growth={growth}
+                graphData={graphData}
+                periodLabel={periodLabel}
+                currentBalanceToday={currentBalanceToday}
+                balanceEvolution={balanceEvolution}
+                categoryChart={categoryChart}
+                paymentMethodChart={paymentMethodChart}
+                dashboardListTab={dashboardListTab}
+                setDashboardListTab={setDashboardListTab}
+                dashboardLists={dashboardLists}
+                formatBRL={formatBRL}
+                graphFilters={graphFilters}
+                onClearFilters={handleClearFilters}
+                onQuickFilter={handleQuickFilter}
+              />
+            } />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
 
+            <Route path="/students" element={
+              <StudentsPage
+                studentsData={studentsData}
+                studentMetrics={studentMetrics}
+                retentionStats={retentionStats}
+                scholarshipData={scholarshipData}
+                studentProfileData={studentProfileData}
+                paymentDayData={paymentDayData}
+                loading={loading}
+                currentPage={studentsPage}
+                setCurrentPage={setStudentsPage}
+                itemsPerPage={studentsItems}
+                setItemsPerPage={setStudentsItems}
+                searchTerm={studentSearch}
+                setSearchTerm={setStudentSearch}
+                studentFilters={studentFilters}
+                setStudentFilters={setStudentFilters}
+                stuSortConfig={stuSortConfig}
+                setStuSortConfig={setStuSortConfig}
+                settings={settings}
+                formatBRL={formatBRL}
+                handleSort={handleSort}
+                studentsScrollRef={studentsScrollRef}
+                studentsTableTopRef={studentsTableTopRef}
+                uniqueOptions={studentOptions}
+                totalDatasetCount={totalStudentsCount}
+              />
+            } />
 
-          {activeTab === 'students' && (
-            <StudentsPage
-              studentsData={studentsData}
-              studentMetrics={studentMetrics}
-              retentionStats={retentionStats}
-              scholarshipData={scholarshipData}
-              studentProfileData={studentProfileData}
-              paymentDayData={paymentDayData}
-              loading={loading}
-              currentPage={studentsPage}
-              setCurrentPage={setStudentsPage}
-              itemsPerPage={studentsItems}
-              setItemsPerPage={setStudentsItems}
-              searchTerm={studentSearch}
-              setSearchTerm={setStudentSearch}
-              studentFilters={studentFilters}
-              setStudentFilters={setStudentFilters}
-              stuSortConfig={stuSortConfig}
-              setStuSortConfig={setStuSortConfig}
-              settings={settings}
-              formatBRL={formatBRL}
-              handleSort={handleSort}
-              studentsScrollRef={studentsScrollRef}
-              studentsTableTopRef={studentsTableTopRef}
-              uniqueOptions={studentOptions}
-              totalDatasetCount={totalStudentsCount}
-            />
-          )}
+            <Route path="/expenses" element={
+              <ExpensesPage
+                expensesTableData={expensesTableData}
+                uniqueExpenseOptions={uniqueExpenseOptions}
+                loading={loading}
+                currentPage={expensesCurrentPage}
+                setCurrentPage={setExpensesCurrentPage}
+                itemsPerPage={expensesItemsPerPage}
+                setItemsPerPage={setExpensesItemsPerPage}
+                expenseFilters={expenseFilters}
+                setExpenseFilters={setExpenseFilters}
+                expenseSubTab={expenseSubTab}
+                setExpenseSubTab={setExpenseSubTab}
+                expSortConfig={expSortConfig}
+                setExpSortConfig={setExpSortConfig}
+                searchTerm={graphFilters.search}
+                setSearchTerm={(term) => setGraphFilters(f => ({ ...f, search: term }))}
+                settings={settings}
+                formatBRL={formatBRL}
+                handleSort={handleSort}
+                expensesScrollRef={expensesScrollRef}
+                expensesTableTopRef={expensesTableTopRef}
+              />
+            } />
 
-          {activeTab === 'expenses' && (
-            <ExpensesPage
-              expensesTableData={expensesTableData}
-              uniqueExpenseOptions={uniqueExpenseOptions}
-              loading={loading}
-              currentPage={expensesCurrentPage}
-              setCurrentPage={setExpensesCurrentPage}
-              itemsPerPage={expensesItemsPerPage}
-              setItemsPerPage={setExpensesItemsPerPage}
-              expenseFilters={expenseFilters}
-              setExpenseFilters={setExpenseFilters}
-              expenseSubTab={expenseSubTab}
-              setExpenseSubTab={setExpenseSubTab}
-              expSortConfig={expSortConfig}
-              setExpSortConfig={setExpSortConfig}
-              searchTerm={graphFilters.search}
-              setSearchTerm={(term) => setGraphFilters(f => ({ ...f, search: term }))}
-              settings={settings}
-              formatBRL={formatBRL}
-              handleSort={handleSort}
-              expensesScrollRef={expensesScrollRef}
-              expensesTableTopRef={expensesTableTopRef}
-            />
-          )}
+            <Route path="/dre" element={
+              <DrePage
+                dreData={dreData}
+                settings={settings}
+                formatBRL={formatBRL}
+              />
+            } />
 
-          {activeTab === 'dre' && (
-            <DrePage
-              dreData={dreData}
-              settings={settings}
-              formatBRL={formatBRL}
-            />
-          )}
+            <Route path="/dre-gerencial" element={<ManagerialPnL data={dataByPeriod} settings={settings} />} />
 
-          {activeTab === 'dre_gerencial' && <ManagerialPnL data={dataByPeriod} settings={settings} />}
+            <Route path="/database" element={
+              <DatabasePage
+                tableData={tableData}
+                paginatedData={paginatedData}
+                itemsPerPage={dbItems}
+                setItemsPerPage={setDbItems}
+                currentPage={dbPage}
+                setCurrentPage={setDbPage}
+                searchTerm={dbSearch}
+                setSearchTerm={setDbSearch}
+                statusFilter={dbStatus}
+                setStatusFilter={setDbStatus}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                accountFilter={accountFilter}
+                setAccountFilter={setAccountFilter}
+                paymentMethodFilter={paymentMethodFilter}
+                setPaymentMethodFilter={setPaymentMethodFilter}
+                startDate={startDate}
+                endDate={endDate}
+                processedData={processedData}
+                dbSortConfig={dbSortConfig}
+                setDbSortConfig={setDbSortConfig}
+                handleSort={handleSort}
+                formatBRL={formatBRL}
+                settings={settings}
+                handleApplyFilters={handleApplyFilters}
+                dbTab={dbTab}
+                setDbTab={setDbTab}
+                financialsTotals={financialsTotals}
+                uniqueOptions={dbUniqueOptions}
+              />
+            } />
 
-          {activeTab === 'database' && (
-            <DatabasePage
-              tableData={tableData}
-              paginatedData={paginatedData}
-              itemsPerPage={dbItems}
-              setItemsPerPage={setDbItems}
-              currentPage={dbPage}
-              setCurrentPage={setDbPage}
-              searchTerm={dbSearch}
-              setSearchTerm={setDbSearch}
-              statusFilter={dbStatus}
-              setStatusFilter={setDbStatus}
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              accountFilter={accountFilter}
-              setAccountFilter={setAccountFilter}
-              paymentMethodFilter={paymentMethodFilter}
-              setPaymentMethodFilter={setPaymentMethodFilter}
-              startDate={startDate}
-              endDate={endDate}
-              processedData={processedData}
-              dbSortConfig={dbSortConfig}
-              setDbSortConfig={setDbSortConfig}
-              handleSort={handleSort}
-              formatBRL={formatBRL}
-              settings={settings}
-              handleApplyFilters={handleApplyFilters}
-              dbTab={dbTab}
-              setDbTab={setDbTab}
-              financialsTotals={financialsTotals}
-              uniqueOptions={dbUniqueOptions}
-            />
-          )}
+            <Route path="/settings" element={
+              <SettingsPage
+                settings={settings}
+                setSettings={setSettings}
+                formSettings={formSettings}
+                setFormSettings={setFormSettings}
+                loading={loading}
+                tenants={tenants}
+                handleCsvUpload={handleCsvUpload}
+                onAddTenant={addTenant}
+                onUpdateTenant={updateTenant}
+                onDeleteTenant={deleteTenant}
+              />
+            } />
 
-          {activeTab === 'configuracoes' && (
-            <SettingsPage
-              settings={settings}
-              setSettings={setSettings}
-              formSettings={formSettings}
-              setFormSettings={setFormSettings}
-              loading={loading}
-              tenants={tenants}
-              handleCsvUpload={handleCsvUpload}
-              onAddTenant={addTenant}
-              onUpdateTenant={updateTenant}
-              onDeleteTenant={deleteTenant}
-            />
-          )}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
 
 
         </div>
@@ -456,7 +501,7 @@ const App = () => {
 
       <OnboardingModal
         isOpen={needsSetup && activeTab !== 'configuracoes'}
-        onConfigure={() => setActiveTab('configuracoes')}
+        onConfigure={() => handleSetActiveTab('configuracoes')}
       />
     </div >
   );

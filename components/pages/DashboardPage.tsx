@@ -246,7 +246,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                                 <div className="grid grid-cols-4 w-full divide-x divide-slate-200 dark:divide-slate-700/50">
                                     <div className="flex flex-col items-center justify-end px-1">
                                         <span className="text-lg sm:text-xl xl:text-2xl font-black text-slate-800 dark:text-white leading-none mb-1 truncate">{stats.inadimplenciaCurrentMonth.toFixed(1)}%</span>
-                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400">Atual</span>
+                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400">Últ. 30 D</span>
                                     </div>
                                     <div className="flex flex-col items-center justify-end px-1">
                                         <span className="text-xs sm:text-sm font-bold leading-none mb-1 text-slate-600 dark:text-slate-300 truncate">{stats.inadimplenciaLast3Months.toFixed(1)}%</span>
@@ -270,7 +270,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         color={stats.inadimplencia <= 5 ? 'emerald' : stats.inadimplencia <= 10 ? 'amber' : 'red'}
                         theme={settings.themeColor}
                         settings={settings}
-                        tooltipText="Inadimplência: Geral / Mês Atual / Últimos 3 Meses / Últimos 12 Meses"
+                        tooltipText="Inadimplência: Últ. 30 dias / Últ. 3 Meses / Últ. 12 Meses / Todo o histórico"
                     />
                     <TicketMedioCard
                         activeStudents={financialIndicators.ticketTotal}
