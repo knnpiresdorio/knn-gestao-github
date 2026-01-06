@@ -68,7 +68,12 @@ export const calculateTicketDistribution = (students: any[]) => {
 };
 
 export const calculateScholarshipImpact = (students: any[]) => {
-    const tiers = ['0%', '5%', '10%', '15%', '20%', '25%', '30%', '35%', '40%', '45%', '50%', '55%', '60%', '65%', '70%', '100%'];
+    // Generate all 5% tiers from 0 to 100
+    const tiers: string[] = [];
+    for (let i = 0; i <= 100; i += 5) {
+        tiers.push(`${i}%`);
+    }
+
     const counts: Record<string, number> = {};
     const values: Record<string, number> = {};
 
@@ -89,18 +94,38 @@ export const calculateScholarshipImpact = (students: any[]) => {
         const rawPayVal = s.valor_atual || s['valor_atual'] || s.currentValue || 0;
         const payVal = typeof rawPayVal === 'number' ? rawPayVal : parseCurrency(String(rawPayVal || '0'));
 
-        // Map to the closest tier
-        const percentageStr = `${Math.round(val)}%`;
+        // Snap to nearest 5%
+        let snapped = Math.round(val / 5) * 5;
+        // Clamp to 0-100
+        if (snapped < 0) snapped = 0;
+        if (snapped > 100) snapped = 100;
+
+        const percentageStr = `${snapped}%`;
+
+        // Safety check - should always be true since we initialized all 5% steps
         if (counts.hasOwnProperty(percentageStr)) {
             counts[percentageStr]++;
             values[percentageStr] += payVal;
+        } else {
+            // Fallback for weird edge cases, though snapped logic should cover it
+            // Create bucket if missing (unlikely with 0-100 loop)
+            counts[percentageStr] = 1;
+            values[percentageStr] = payVal;
+            // Add to tiers list so it shows up in chart if it wasn't there
+            if (!tiers.includes(percentageStr)) tiers.push(percentageStr);
         }
     });
 
-    return tiers.map(name => ({
+    // Sort tiers numerically to ensure chart order is correct
+    const sortedTiers = tiers.sort((a, b) => parseInt(a) - parseInt(b));
+
+    // Return the mapped data
+    // We intentionally include all tiers (even 0 value) to maintain the linear scale appearance on the chart if desired,
+    // or filter them. Based on user feedback about "missing data", showing all 5% increments is safer.
+    return sortedTiers.map(name => ({
         name,
-        value: counts[name],
-        totalValue: values[name]
+        value: counts[name] || 0,
+        totalValue: values[name] || 0
     }));
 };
 
