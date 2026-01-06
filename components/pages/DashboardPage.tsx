@@ -69,6 +69,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     const entradasPendingStrict = stats.pendente - stats.atrasado;
     const saidasPendingStrict = stats.saidaPendente - stats.saidaAtrasado;
 
+    const gradientOffset = () => {
+        if (!balanceEvolution || balanceEvolution.length === 0) return 0;
+        const dataMax = Math.max(...balanceEvolution.map((i) => i.realized));
+        const dataMin = Math.min(...balanceEvolution.map((i) => i.realized));
+
+        if (dataMax <= 0) return 0;
+        if (dataMin >= 0) return 1;
+
+        return dataMax / (dataMax - dataMin);
+    };
+
+    const off = gradientOffset();
+
     return (
         <div className="p-6 md:p-8 space-y-6 animate-in fade-in duration-500 h-full overflow-y-auto pb-20 custom-scrollbar">
             {/* HEADER - COMPACT LAYOUT */}
@@ -336,12 +349,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                             <AreaChart data={balanceEvolution} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0.5" stopColor="#10b981" stopOpacity={0.2} />
-                                        <stop offset="0.5" stopColor="#f43f5e" stopOpacity={0.2} />
+                                        <stop offset={off} stopColor="#10b981" stopOpacity={0.2} />
+                                        <stop offset={off} stopColor="#f43f5e" stopOpacity={0.2} />
                                     </linearGradient>
                                     <linearGradient id="splitStroke" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0.5" stopColor="#10b981" stopOpacity={1} />
-                                        <stop offset="0.5" stopColor="#f43f5e" stopOpacity={1} />
+                                        <stop offset={off} stopColor="#10b981" stopOpacity={1} />
+                                        <stop offset={off} stopColor="#f43f5e" stopOpacity={1} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={settings.darkMode ? '#334155' : '#e2e8f0'} />

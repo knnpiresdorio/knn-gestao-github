@@ -238,7 +238,17 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
 
 
         // 1. Initial Balance & Global Total (All-time context)
-        const periodStartTs = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
+        // If NO startDate is provided (All time view), find the earliest data point to start the chart
+        let effectiveStartTs = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
+
+        if (!startDate && processedData.length > 0) {
+            const minTs = Math.min(...processedData.filter((i: any) => i.ts > 0).map((i: any) => i.ts));
+            if (minTs !== Infinity) {
+                effectiveStartTs = minTs;
+            }
+        }
+
+        const periodStartTs = effectiveStartTs;
         const periodEndTs = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
 
         let cumulativeRealized = 0;
@@ -286,9 +296,9 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         const iter = new Date(periodStartTs);
         const endIter = new Date(periodEndTs > today.getTime() + (365 * 24 * 3600 * 1000) ? today.getTime() : periodEndTs); // Cap at 1 year ahead if range is too large
 
-        // Safety break
+        // Safety break - 5 Years (approx 1830 days)
         let safetyCount = 0;
-        while (iter <= endIter && safetyCount < 730) {
+        while (iter <= endIter && safetyCount < 1830) {
             const dayKey = format(iter, 'yyyy-MM-dd');
             cumulativeRealized += (periodRealized[dayKey] || 0);
             cumulativeProjected += (periodProjected[dayKey] || 0);
