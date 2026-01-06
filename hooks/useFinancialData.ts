@@ -293,19 +293,33 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
 
         // 3. Generate smooth daily timeline for the chart
         const balanceEvolutionCumulative: any[] = [];
+
+        // Default to 1 year ahead strictly as per user request
+        const defaultFuture = today.getTime() + (365 * 24 * 3600 * 1000);
+        const autoEndTs = defaultFuture;
+
         const iter = new Date(periodStartTs);
-        const endIter = new Date(periodEndTs > today.getTime() + (365 * 24 * 3600 * 1000) ? today.getTime() : periodEndTs); // Cap at 1 year ahead if range is too large
+        // If specific endDate is filtered, use it. Else use auto-extended future date.
+        const targetEndTs = endDate ? periodEndTs : autoEndTs;
+
+        const endIter = new Date(targetEndTs);
 
         // Safety break - 5 Years (approx 1830 days)
         let safetyCount = 0;
+
+        // Helper to check if a date is in the future (after today)
+        const isFuture = (d: Date) => d > today;
+
         while (iter <= endIter && safetyCount < 1830) {
             const dayKey = format(iter, 'yyyy-MM-dd');
             cumulativeRealized += (periodRealized[dayKey] || 0);
             cumulativeProjected += (periodProjected[dayKey] || 0);
 
+            const iterIsFuture = isFuture(iter);
+
             balanceEvolutionCumulative.push({
-                date: format(iter, 'dd/MM'),
-                realized: cumulativeRealized,
+                date: format(iter, 'dd/MM/yy'),
+                realized: iterIsFuture ? null : cumulativeRealized, // Stop realized line at today
                 projected: cumulativeProjected,
             });
 
