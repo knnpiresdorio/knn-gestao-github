@@ -3,7 +3,6 @@ import {
     GraduationCap, Search, ChevronDown, X, FileSearch, RefreshCw, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { STATUS_STYLES, THEME_BG_COLORS } from '../../utils/constants';
-import { SortConfig } from '../../utils/formatters';
 import StudentsKpiGrid from '../students/StudentsKpiGrid';
 import ScholarshipChart from '../students/ScholarshipChart';
 import StudentProfileChart from '../students/StudentProfileChart';
@@ -26,12 +25,12 @@ interface StudentsPageProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     studentFilters: { status: string, book?: string, period?: string, day?: string };
-    setStudentFilters: (filters: any) => void;
-    stuSortConfig: SortConfig[];
-    setStuSortConfig: (config: SortConfig[]) => void;
+    setStudentFilters: (filters: any) => void; // Using any or specific type if available
+    stuSortConfig: any[];
+    setStuSortConfig: (config: any[]) => void;
     settings: any;
     formatBRL: (val: number, showCents: boolean, privacyMode: boolean) => string;
-    handleSort: (key: string, currentConfig: SortConfig[], setConfig: (c: SortConfig[] | ((prev: SortConfig[]) => SortConfig[])) => void) => void;
+    handleSort: (key: string, currentConfig: any[], setConfig: (c: any[]) => void) => void;
     studentsScrollRef: React.RefObject<HTMLDivElement>;
     studentsTableTopRef: React.RefObject<HTMLDivElement>;
     uniqueOptions: { books: string[], periods: string[], days: string[] };
@@ -112,10 +111,10 @@ const StudentsPage: React.FC<StudentsPageProps> = ({
             </div>
 
             {/* MAIN CONTENT CONTAINER */}
-            <div className="bg-app-card dark:bg-slate-900 rounded-xl shadow-sm border border-transparent dark:border-slate-800 p-6 shrink-0 z-10">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 shrink-0 z-10">
 
                 {/* TABS NAVIGATION */}
-                <div className="flex items-center gap-8 border-b border-slate-100 dark:border-slate-700 mb-6">
+                <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-700 mb-6">
                     <button
                         onClick={() => { setActiveTab('dashboard'); setCurrentPage(1); }}
                         className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${activeTab === 'dashboard' ? 'text-violet-600 dark:text-violet-400 border-violet-600 dark:border-violet-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}

@@ -321,8 +321,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         <span className="block text-xs text-slate-400">Exibir casas decimais</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setSettings((s: any) => ({ ...s, showCents: !s.showCents }))} className={`w-11 h-6 rounded-full transition-colors relative ${settings.showCents ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.showCents ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                <button onClick={() => setFormSettings((s: any) => ({ ...s, showCents: !s.showCents }))} className={`w-11 h-6 rounded-full transition-colors relative ${formSettings.showCents ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formSettings.showCents ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                 </button>
                             </div>
 
@@ -335,8 +335,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         <span className="block text-xs text-slate-400">Ocultar valores</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setSettings((s: any) => ({ ...s, privacyMode: !s.privacyMode }))} className={`w-11 h-6 rounded-full transition-colors relative ${settings.privacyMode ? 'bg-slate-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.privacyMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                <button onClick={() => setFormSettings((s: any) => ({ ...s, privacyMode: !s.privacyMode }))} className={`w-11 h-6 rounded-full transition-colors relative ${formSettings.privacyMode ? 'bg-slate-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formSettings.privacyMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                 </button>
                             </div>
 
@@ -349,8 +349,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         <span className="block text-xs text-slate-400">Alternar tema visual do sistema</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setSettings((s: any) => ({ ...s, darkMode: !s.darkMode }))} className={`w-11 h-6 rounded-full transition-colors relative ${settings.darkMode ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.darkMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                <button onClick={() => setFormSettings((s: any) => ({ ...s, darkMode: !s.darkMode }))} className={`w-11 h-6 rounded-full transition-colors relative ${formSettings.darkMode ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formSettings.darkMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                 </button>
                             </div>
 
