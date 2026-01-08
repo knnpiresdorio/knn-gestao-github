@@ -5,25 +5,26 @@ import {
 } from 'recharts';
 import {
     ArrowUpRight, ArrowDownRight, Wallet, Percent, Scale, AlertTriangle, Receipt, Activity,
-    Calendar, DollarSign, CreditCard, Bell, BarChart2, Gauge, TrendingUp, TrendingDown, AlertCircle, Users, UserMinus, LayoutDashboard // Added Gauge, Users, UserMinus, LayoutDashboard
+    Calendar, DollarSign, CreditCard, Bell, BarChart2, Gauge, TrendingUp, TrendingDown, AlertCircle, Users, UserMinus, LayoutDashboard
 } from 'lucide-react';
 
 import KpiCard from '../dashboard/KpiCard';
 import TicketMedioCard from '../dashboard/TicketMedioCard';
 import { CustomBarTooltip, CustomPieTooltip, CustomBarLabel, CustomTooltip } from '../charts/CustomTooltips';
-import { CHART_COLORS, THEME_BG_COLORS } from '../../utils/constants'; // Added THEME_BG_COLORS
+import { CHART_COLORS, THEME_BG_COLORS } from '../../utils/constants';
 
 
 interface DashboardPageProps {
     stats: any;
     financialIndicators: any;
-
     settings: any;
     growth: any;
     graphData: any[];
     periodLabel: string;
     currentBalanceToday: number;
     balanceEvolution: any[];
+    balanceEvolutionBiweekly: any[];
+    balanceEvolutionMonthly: any[];
     categoryChart: any[];
     paymentMethodChart: any[];
     dashboardListTab: string;
@@ -42,12 +43,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     financialIndicators,
     loading,
     settings,
-
     growth,
     graphData,
     periodLabel,
     currentBalanceToday,
     balanceEvolution,
+    balanceEvolutionBiweekly,
+    balanceEvolutionMonthly,
     categoryChart,
     paymentMethodChart,
     dashboardListTab,
@@ -71,8 +73,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
     const gradientOffset = () => {
         if (!balanceEvolution || balanceEvolution.length === 0) return 0;
-        const dataMax = Math.max(...balanceEvolution.map((i) => i.realized));
-        const dataMin = Math.min(...balanceEvolution.map((i) => i.realized));
+        const dataMax = Math.max(...balanceEvolution.map((i) => i.realized || 0));
+        const dataMin = Math.min(...balanceEvolution.map((i) => i.realized || 0));
 
         if (dataMax <= 0) return 0;
         if (dataMin >= 0) return 1;
@@ -138,7 +140,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                                 <span className="text-rose-400">{formatBRL(stats.saidaAtrasado, settings.showCents, settings.privacyMode)}</span>
                             </div>
                         }
-                        icon={TrendingDown} // Image shows arrow down-right, normally trending-down but let's stick to generic or adjust if icon available
+                        icon={TrendingDown}
                         color="rose"
                         highlight={true}
                         theme={settings.themeColor}
@@ -152,7 +154,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         value={formatBRL(stats.saldo, settings.showCents, settings.privacyMode)}
                         sub="ENTRADAS PAGAS - SAÍDAS PAGAS"
                         icon={Wallet}
-                        color={stats.saldo >= 0 ? 'blue' : 'orange'} // Image shows blue for negative? No, typically orange/red for negative, but text color might handle it. Image shows white value.
+                        color={stats.saldo >= 0 ? 'blue' : 'orange'}
                         highlight={true}
                         theme={settings.themeColor}
                         loading={loading}
@@ -168,7 +170,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                             </div>
                         }
                         icon={Activity}
-                        color="rose" // Image shows reddish background/icon
+                        color="rose"
                         theme={settings.themeColor}
                         tooltipText="Lucratividade percentual (Saldo / Entradas * 100)."
                         subElement={
@@ -214,7 +216,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                                 <div className="flex gap-3 items-start">
                                     <div className="flex-1 flex flex-col gap-1">
                                         <div className="relative w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                            {/* Marker at 100% (50% position) */}
                                             <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-slate-900/10 dark:bg-white/20 z-10"></div>
                                             <div
                                                 className={`h-full rounded-full transition-all duration-500 ${stats.entrada >= financialIndicators.breakEvenQuarterly ? 'bg-emerald-500' : 'bg-rose-500'}`}
@@ -341,7 +342,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         <div className={`text-lg font-black ${currentBalanceToday >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{formatBRL(currentBalanceToday, settings.showCents, settings.privacyMode)}</div>
                     </div>
                     <div className="flex flex-col mb-6">
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><Activity size={18} className="text-blue-500" /> Evolução do Saldo</h3>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><Activity size={18} className="text-blue-500" /> Evolução do Saldo - Dia-a-Dia</h3>
                         <span className="text-xs text-slate-400 font-normal mt-1 flex items-center gap-1"><Calendar size={12} /> {periodLabel}</span>
                     </div>
                     <div className="h-72">
@@ -366,6 +367,68 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                                 <Area type="monotone" dataKey="realized" stroke="url(#splitStroke)" fill="url(#splitColor)" strokeWidth={2} activeDot={{ r: 6, strokeWidth: 0 }} name="Realizado" />
                             </AreaChart>
                         </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors relative">
+                        <div className="flex flex-col mb-6">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><Activity size={18} className="text-blue-500" /> Evolução do Saldo - Quinzenal</h3>
+                            <span className="text-xs text-slate-400 font-normal mt-1 flex items-center gap-1"><Calendar size={12} /> {periodLabel} (Dias 01 e 15)</span>
+                        </div>
+                        <div className="h-72">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                                <AreaChart data={balanceEvolutionBiweekly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="splitColorBQ" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset={off} stopColor="#10b981" stopOpacity={0.2} />
+                                            <stop offset={off} stopColor="#f43f5e" stopOpacity={0.2} />
+                                        </linearGradient>
+                                        <linearGradient id="splitStrokeBQ" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset={off} stopColor="#10b981" stopOpacity={1} />
+                                            <stop offset={off} stopColor="#f43f5e" stopOpacity={1} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={settings.darkMode ? '#334155' : '#e2e8f0'} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: settings.darkMode ? '#94a3b8' : '#64748b', fontSize: 11 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: settings.darkMode ? '#94a3b8' : '#64748b', fontSize: 11 }} tickFormatter={(val: any) => `R$${val / 1000}k`} />
+                                    <Tooltip content={<CustomTooltip settings={settings} />} />
+                                    <ReferenceLine y={0} stroke={settings.darkMode ? '#64748b' : '#94a3b8'} strokeDasharray="3 3" />
+                                    <Area type="monotone" dataKey="projected" stroke="#64748b" strokeWidth={2} strokeDasharray="5 5" fill="transparent" name="Projetado" />
+                                    <Area type="monotone" dataKey="realized" stroke="url(#splitStrokeBQ)" fill="url(#splitColorBQ)" strokeWidth={2} activeDot={{ r: 6, strokeWidth: 0 }} name="Realizado" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors relative">
+                        <div className="flex flex-col mb-6">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><Activity size={18} className="text-blue-500" /> Evolução do Saldo - Mensal</h3>
+                            <span className="text-xs text-slate-400 font-normal mt-1 flex items-center gap-1"><Calendar size={12} /> {periodLabel} (Dia 01)</span>
+                        </div>
+                        <div className="h-72">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                                <AreaChart data={balanceEvolutionMonthly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="splitColorMQ" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset={off} stopColor="#10b981" stopOpacity={0.2} />
+                                            <stop offset={off} stopColor="#f43f5e" stopOpacity={0.2} />
+                                        </linearGradient>
+                                        <linearGradient id="splitStrokeMQ" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset={off} stopColor="#10b981" stopOpacity={1} />
+                                            <stop offset={off} stopColor="#f43f5e" stopOpacity={1} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={settings.darkMode ? '#334155' : '#e2e8f0'} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: settings.darkMode ? '#94a3b8' : '#64748b', fontSize: 11 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: settings.darkMode ? '#94a3b8' : '#64748b', fontSize: 11 }} tickFormatter={(val: any) => `R$${val / 1000}k`} />
+                                    <Tooltip content={<CustomTooltip settings={settings} />} />
+                                    <ReferenceLine y={0} stroke={settings.darkMode ? '#64748b' : '#94a3b8'} strokeDasharray="3 3" />
+                                    <Area type="monotone" dataKey="projected" stroke="#64748b" strokeWidth={2} strokeDasharray="5 5" fill="transparent" name="Projetado" />
+                                    <Area type="monotone" dataKey="realized" stroke="url(#splitStrokeMQ)" fill="url(#splitColorMQ)" strokeWidth={2} activeDot={{ r: 6, strokeWidth: 0 }} name="Realizado" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
             </div>

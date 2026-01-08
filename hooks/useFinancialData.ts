@@ -57,7 +57,18 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
     }, [dataByPeriod]);
 
     // --- KPI & CHARTS ---
-    const { stats, financialIndicators, currentBalanceToday, graphData, balanceEvolution, categoryChart, paymentMethodChart, growth } = useMemo(() => {
+    const {
+        stats,
+        financialIndicators,
+        currentBalanceToday,
+        graphData,
+        balanceEvolution,
+        balanceEvolutionBiweekly,
+        balanceEvolutionMonthly,
+        categoryChart,
+        paymentMethodChart,
+        growth
+    } = useMemo(() => {
 
         // 1. Initialize Accumulators
         let entradaPago = 0;
@@ -293,6 +304,8 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
 
         // 3. Generate smooth daily timeline for the chart
         const balanceEvolutionCumulative: any[] = [];
+        const balanceEvolutionBiweekly: any[] = [];
+        const balanceEvolutionMonthly: any[] = [];
 
         // Default to 1 year ahead strictly as per user request
         const defaultFuture = today.getTime() + (365 * 24 * 3600 * 1000);
@@ -310,18 +323,41 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         // Helper to check if a date is in the future (after today)
         const isFuture = (d: Date) => d > today;
 
+        let cumRealized = cumulativeRealized;
+        let cumProjected = cumulativeProjected;
+
         while (iter <= endIter && safetyCount < 1830) {
             const dayKey = format(iter, 'yyyy-MM-dd');
-            cumulativeRealized += (periodRealized[dayKey] || 0);
-            cumulativeProjected += (periodProjected[dayKey] || 0);
+            cumRealized += (periodRealized[dayKey] || 0);
+            cumProjected += (periodProjected[dayKey] || 0);
 
             const iterIsFuture = isFuture(iter);
+            const dayOfMonth = iter.getDate();
 
+            // Daily (Original)
             balanceEvolutionCumulative.push({
                 date: format(iter, 'dd/MM/yy'),
-                realized: iterIsFuture ? null : cumulativeRealized, // Stop realized line at today
-                projected: cumulativeProjected,
+                realized: iterIsFuture ? null : cumRealized,
+                projected: cumProjected,
             });
+
+            // Bi-weekly (1st and 15th)
+            if (dayOfMonth === 1 || dayOfMonth === 15) {
+                balanceEvolutionBiweekly.push({
+                    date: format(iter, 'dd/MM/yy'),
+                    realized: iterIsFuture ? null : cumRealized,
+                    projected: cumProjected,
+                });
+            }
+
+            // Monthly (1st)
+            if (dayOfMonth === 1) {
+                balanceEvolutionMonthly.push({
+                    date: format(iter, 'dd/MM/yy'),
+                    realized: iterIsFuture ? null : cumRealized,
+                    projected: cumProjected,
+                });
+            }
 
             iter.setDate(iter.getDate() + 1);
             safetyCount++;
@@ -491,6 +527,8 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
             currentBalanceToday: totalMoneyCalculated,
             graphData: graphDataArray,
             balanceEvolution: balanceEvolutionCumulative,
+            balanceEvolutionBiweekly,
+            balanceEvolutionMonthly,
             categoryChart,
             paymentMethodChart,
             growth: { entrada: 0, saida: 0 }
@@ -601,7 +639,16 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
 
     return {
         dreData,
-        stats, financialIndicators, currentBalanceToday, graphData, balanceEvolution, categoryChart, paymentMethodChart, growth,
+        stats,
+        financialIndicators,
+        currentBalanceToday,
+        graphData,
+        balanceEvolution,
+        balanceEvolutionBiweekly,
+        balanceEvolutionMonthly,
+        categoryChart,
+        paymentMethodChart,
+        growth,
         alerts,
         dashboardLists,
         expensesTableData, uniqueExpenseOptions,

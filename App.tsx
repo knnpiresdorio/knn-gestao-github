@@ -107,7 +107,7 @@ const App = () => {
   } = useStudentsData(processedData);
 
   const {
-    dreData, stats, financialIndicators, graphData, balanceEvolution, categoryChart, paymentMethodChart, growth, currentBalanceToday,
+    dreData, stats, financialIndicators, graphData, balanceEvolution, balanceEvolutionBiweekly, balanceEvolutionMonthly, categoryChart, paymentMethodChart, growth, currentBalanceToday,
     alerts, dashboardLists,
     expensesTableData, uniqueExpenseOptions,
     graphFilters, setGraphFilters,
@@ -352,6 +352,8 @@ const App = () => {
                 periodLabel={periodLabel}
                 currentBalanceToday={currentBalanceToday}
                 balanceEvolution={balanceEvolution}
+                balanceEvolutionBiweekly={balanceEvolutionBiweekly}
+                balanceEvolutionMonthly={balanceEvolutionMonthly}
                 categoryChart={categoryChart}
                 paymentMethodChart={paymentMethodChart}
                 dashboardListTab={dashboardListTab}
