@@ -7,3 +7,27 @@
     @apply font-sans antialiased bg-app-bg text-text-primary dark:bg-slate-950 dark:text-slate-100;
   }
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Ensure charts and cards look good in PDF */
+  .bg-white {
+    background-color: white !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  .shadow-sm {
+    box-shadow: none !important;
+  }
+}

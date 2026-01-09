@@ -12,8 +12,6 @@ import KpiCard from '../dashboard/KpiCard';
 import TicketMedioCard from '../dashboard/TicketMedioCard';
 import { CustomBarTooltip, CustomPieTooltip, CustomBarLabel, CustomTooltip } from '../charts/CustomTooltips';
 import { CHART_COLORS, THEME_BG_COLORS } from '../../utils/constants';
-import { exportToPdf } from '../../utils/pdfExport';
-import { Download } from 'lucide-react';
 
 
 interface DashboardPageProps {
@@ -87,27 +85,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     const off = gradientOffset();
 
     return (
-        <div id="dashboard-content" className="p-6 md:p-8 space-y-6 animate-in fade-in duration-500 h-full overflow-y-auto pb-20 custom-scrollbar bg-app-bg dark:bg-slate-950">
+        <div className="p-6 md:p-8 space-y-6 animate-in fade-in duration-500 h-full overflow-y-auto pb-20 custom-scrollbar">
             {/* HEADER - COMPACT LAYOUT */}
-            <div className="flex items-center justify-between gap-3 mb-2 shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
-                        <LayoutDashboard size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                        <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Dashboard de Indicadores</h2>
-                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Visão 360º dos principais KPIs e métricas do negócio.</p>
-                    </div>
+            <div className="flex items-center gap-3 mb-2 shrink-0">
+                <div className={`w-10 h-10 rounded-lg ${currentThemeBg} flex items-center justify-center text-white shadow-lg`}>
+                    <LayoutDashboard size={20} />
                 </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => exportToPdf(['pdf-section-1', 'pdf-section-2', 'pdf-section-3'], `KNN_Relatorio_${new Date().toISOString().split('T')[0]}.pdf`)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm no-print"
-                    >
-                        <Download size={16} className="text-blue-500" />
-                        <span>Exportar PDF</span>
-                    </button>
+                <div className="flex flex-col">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Dashboard de Indicadores</h2>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Visão 360º dos principais KPIs e métricas do negócio.</p>
                 </div>
             </div>
             {isGraphFiltered && (
@@ -117,7 +103,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 </div>
             )}
 
-            <div id="pdf-section-1" className="flex flex-col gap-6 animate-in fade-in duration-500 bg-app-bg dark:bg-slate-950">
+            <div className="flex flex-col gap-6 animate-in fade-in duration-500">
                 {/* KPI GRID */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <KpiCard
@@ -135,6 +121,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         }
                         icon={TrendingUp}
                         color="emerald"
+                        highlight={true}
                         theme={settings.themeColor}
                         tooltipText="Total de entradas confirmadas (status 'Pago'). Pendentes e Atrasados listados abaixo."
                         loading={loading}
@@ -155,6 +142,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         }
                         icon={TrendingDown}
                         color="rose"
+                        highlight={true}
                         theme={settings.themeColor}
                         tooltipText="Total de saídas realizadas (status 'Pago'). Pendentes e Atrasados listados abaixo."
                         loading={loading}
@@ -167,6 +155,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         sub="ENTRADAS PAGAS - SAÍDAS PAGAS"
                         icon={Wallet}
                         color={stats.saldo >= 0 ? 'blue' : 'orange'}
+                        highlight={true}
                         theme={settings.themeColor}
                         loading={loading}
                         tooltipText="Resultado financeiro simples (Entradas - Saídas) do período."
@@ -320,35 +309,33 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     />
 
                 </div>
+            </div>
 
-                <div className="flex flex-col gap-6">
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
-                        <div className="flex flex-col mb-6">
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">Fluxo de Caixa Mensal</h3>
-                            <span className="text-xs text-slate-400 font-normal mt-1 flex items-center gap-1"><Calendar size={12} /> {periodLabel}</span>
-                        </div>
-                        <div className="h-72">
-                            <div className="flex-1 h-full min-w-0">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                                    <ComposedChart data={graphData}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={settings.darkMode ? '#334155' : '#f1f5f9'} />
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: settings.darkMode ? '#94a3b8' : '#64748b', fontSize: 12 }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: settings.darkMode ? '#94a3b8' : '#64748b', fontSize: 12 }} />
-                                        <Tooltip content={<CustomBarTooltip settings={settings} />} cursor={{ fill: settings.darkMode ? '#1e293b' : '#f8fafc' }} />
-                                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                                        <Bar name="Entr. Pagas" dataKey="entradaPago" stackId="in" fill="#10b981" fillOpacity={1} radius={[0, 0, 0, 0]} barSize={24} label={(p: any) => CustomBarLabel(p, 'in')} />
-                                        <Bar name="Entr. Pendentes" dataKey="entradaPendente" stackId="in" fill="#10b981" fillOpacity={0.4} radius={[4, 4, 0, 0]} barSize={24} label={(p: any) => CustomBarLabel(p, 'in')} />
-                                        <Bar name="Saídas Pagas" dataKey="saidaPago" stackId="out" fill="#f43f5e" fillOpacity={1} radius={[0, 0, 0, 0]} barSize={24} label={(p: any) => CustomBarLabel(p, 'out')} />
-                                        <Bar name="Saídas Pendentes" dataKey="saidaPendente" stackId="out" fill="#f43f5e" fillOpacity={0.4} radius={[4, 4, 0, 0]} barSize={24} label={(p: any) => CustomBarLabel(p, 'out')} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </div>
+            <div className="flex flex-col gap-6">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+                    <div className="flex flex-col mb-6">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">Fluxo de Caixa Mensal</h3>
+                        <span className="text-xs text-slate-400 font-normal mt-1 flex items-center gap-1"><Calendar size={12} /> {periodLabel}</span>
+                    </div>
+                    <div className="h-72">
+                        <div className="flex-1 h-full min-w-0">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                                <ComposedChart data={graphData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={settings.darkMode ? '#334155' : '#f1f5f9'} />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: settings.darkMode ? '#94a3b8' : '#64748b', fontSize: 12 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: settings.darkMode ? '#94a3b8' : '#64748b', fontSize: 12 }} />
+                                    <Tooltip content={<CustomBarTooltip settings={settings} />} cursor={{ fill: settings.darkMode ? '#1e293b' : '#f8fafc' }} />
+                                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                                    <Bar name="Entr. Pagas" dataKey="entradaPago" stackId="in" fill="#10b981" fillOpacity={1} radius={[0, 0, 0, 0]} barSize={24} label={(p: any) => CustomBarLabel(p, 'in')} />
+                                    <Bar name="Entr. Pendentes" dataKey="entradaPendente" stackId="in" fill="#10b981" fillOpacity={0.4} radius={[4, 4, 0, 0]} barSize={24} label={(p: any) => CustomBarLabel(p, 'in')} />
+                                    <Bar name="Saídas Pagas" dataKey="saidaPago" stackId="out" fill="#f43f5e" fillOpacity={1} radius={[0, 0, 0, 0]} barSize={24} label={(p: any) => CustomBarLabel(p, 'out')} />
+                                    <Bar name="Saídas Pendentes" dataKey="saidaPendente" stackId="out" fill="#f43f5e" fillOpacity={0.4} radius={[4, 4, 0, 0]} barSize={24} label={(p: any) => CustomBarLabel(p, 'out')} />
+                                </ComposedChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="pdf-section-2" className="flex flex-col gap-6 bg-app-bg dark:bg-slate-950">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors relative">
                     <div className="absolute top-6 right-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-xl p-3 flex flex-col items-end z-10">
                         <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><DollarSign size={10} /> Saldo Hoje</div>
@@ -446,33 +433,33 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 </div>
             </div>
 
-            <div id="pdf-section-3" className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg dark:bg-slate-950">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Top Despesas</h3>
                     <div className="h-64 flex items-center">
-                        <div className="flex-[0.8] h-full min-w-0 flex items-center justify-center">
+                        <div className="flex-1 h-full min-w-0">
                             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                 <PieChart>
-                                    <Pie data={categoryChart} innerRadius={55} outerRadius={75} paddingAngle={2} dataKey="value" stroke="none">
+                                    <Pie data={categoryChart} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                                         {categoryChart.map((entry, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
                                     </Pie>
                                     <Tooltip content={<CustomPieTooltip settings={settings} />} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="flex-1 grid grid-cols-2 gap-2 overflow-y-auto max-h-56 pr-2 custom-scrollbar text-xs bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800/50">
+                        <div className="w-48 space-y-3 overflow-y-auto max-h-56 pr-2 custom-scrollbar text-xs">
                             {categoryChart.map((cat, i) => {
                                 const total = categoryChart.reduce((a, b) => a + b.value, 0);
                                 const percent = total > 0 ? ((cat.value / total) * 100).toFixed(1) : 0;
                                 return (
-                                    <div key={i} className="flex justify-between items-center group p-2 hover:bg-white dark:hover:bg-slate-700/50 rounded-lg transition-all shadow-hover border border-transparent hover:border-slate-200/50 dark:hover:border-slate-600/30 min-w-0">
-                                        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                                            <span className="truncate text-slate-600 dark:text-slate-300 font-bold text-[10px] uppercase tracking-tight" title={cat.name}>{cat.name}</span>
+                                    <div key={i} className="flex justify-between items-center group p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                                        <div className="flex items-center gap-3 truncate max-w-[65%]">
+                                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                            <span className="truncate text-slate-600 dark:text-slate-300 font-medium text-xs" title={cat.name}>{cat.name}</span>
                                         </div>
-                                        <div className="flex flex-col items-end flex-shrink-0">
-                                            <span className="font-black text-slate-800 dark:text-white text-[10px]">{formatBRL(cat.value, settings.showCents, settings.privacyMode)}</span>
-                                            <span className="text-[9px] font-bold text-slate-400">{percent}%</span>
+                                        <div className="flex flex-col items-end">
+                                            <span className="font-bold text-slate-800 dark:text-white text-xs">{formatBRL(cat.value, settings.showCents, settings.privacyMode)}</span>
+                                            <span className="text-[10px] font-medium text-slate-400">{percent}%</span>
                                         </div>
                                     </div>
                                 )
@@ -483,29 +470,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><CreditCard size={18} className="text-purple-500" /> Formas de Pagamento</h3>
                     <div className="h-64 flex items-center">
-                        <div className="flex-[0.8] h-full min-w-0 flex items-center justify-center">
+                        <div className="flex-1 h-full min-w-0">
                             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                 <PieChart>
-                                    <Pie data={paymentMethodChart} innerRadius={55} outerRadius={75} paddingAngle={2} dataKey="value" stroke="none">
+                                    <Pie data={paymentMethodChart} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                                         {paymentMethodChart.map((entry, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[(index + 3) % CHART_COLORS.length]} />)}
                                     </Pie>
                                     <Tooltip content={<CustomPieTooltip settings={settings} />} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="flex-1 grid grid-cols-2 gap-2 overflow-y-auto max-h-56 pr-2 custom-scrollbar text-xs bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800/50">
+                        <div className="w-48 space-y-3 overflow-y-auto max-h-56 pr-2 custom-scrollbar text-xs">
                             {paymentMethodChart.map((pm, i) => {
                                 const total = paymentMethodChart.reduce((a, b) => a + b.value, 0);
                                 const percent = total > 0 ? ((pm.value / total) * 100).toFixed(1) : 0;
                                 return (
-                                    <div key={i} className="flex justify-between items-center group p-2 hover:bg-white dark:hover:bg-slate-700/50 rounded-lg transition-all shadow-hover border border-transparent hover:border-slate-200/50 dark:hover:border-slate-600/30 min-w-0">
-                                        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: CHART_COLORS[(i + 3) % CHART_COLORS.length] }} />
-                                            <span className="truncate text-slate-600 dark:text-slate-300 font-bold text-[10px] uppercase tracking-tight" title={pm.name}>{pm.name}</span>
+                                    <div key={i} className="flex justify-between items-center group p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                                        <div className="flex items-center gap-3 truncate max-w-[65%]">
+                                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[(i + 3) % CHART_COLORS.length] }} />
+                                            <span className="truncate text-slate-600 dark:text-slate-300 font-medium text-xs" title={pm.name}>{pm.name}</span>
                                         </div>
-                                        <div className="flex flex-col items-end flex-shrink-0">
-                                            <span className="font-black text-slate-800 dark:text-white text-[10px]">{formatBRL(pm.value, settings.showCents, settings.privacyMode)}</span>
-                                            <span className="text-[9px] font-bold text-slate-400">{percent}%</span>
+                                        <div className="flex flex-col items-end">
+                                            <span className="font-bold text-slate-800 dark:text-white text-xs">{formatBRL(pm.value, settings.showCents, settings.privacyMode)}</span>
+                                            <span className="text-[10px] font-medium text-slate-400">{percent}%</span>
                                         </div>
                                     </div>
                                 )
@@ -516,7 +503,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
 
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 overflow-hidden flex flex-col no-print">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 overflow-hidden flex flex-col">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
@@ -580,6 +567,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     </table>
                 </div>
             </div>
+
         </div>
     );
 };
