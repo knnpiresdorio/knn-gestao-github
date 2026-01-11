@@ -623,7 +623,7 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
     }, [studentsData, processedData]);
 
     // --- EXPENSES DATA ---
-    const { expensesTableData, uniqueExpenseOptions } = useMemo(() => {
+    const { expensesTableData, uniqueExpenseOptions, expensesTotals } = useMemo(() => {
         let filtered = processedData.filter((i: any) => i.type === 'Saída');
         if (startDate || endDate) {
             const startTs = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
@@ -644,12 +644,20 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         if (expenseFilters.status !== 'Todos') filtered = filtered.filter((i: any) => i.status === expenseFilters.status);
         if (graphFilters.search) filtered = filtered.filter((i: any) => i.desc.toLowerCase().includes(graphFilters.search.toLowerCase()));
 
+        // Calculate totals for currently filtered view
+        const expensesTotals: Record<string, number> = {};
+        filtered.forEach((item: any) => {
+            const status = item.status || 'Outros';
+            expensesTotals[status] = (expensesTotals[status] || 0) + item.absVal;
+        });
+
         return {
             expensesTableData: {
                 fixed: isFixed ? sortData(filtered, expSortConfig) : [],
                 variable: !isFixed ? sortData(filtered, expSortConfig) : []
             },
-            uniqueExpenseOptions: { cats, payments }
+            uniqueExpenseOptions: { cats, payments },
+            expensesTotals
         };
     }, [processedData, startDate, endDate, expenseFilters, graphFilters.search, expenseSubTab, expSortConfig]);
 
@@ -674,7 +682,7 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         growth,
         alerts,
         dashboardLists,
-        expensesTableData, uniqueExpenseOptions,
+        expensesTableData, uniqueExpenseOptions, expensesTotals,
         graphFilters, setGraphFilters,
         expenseSubTab, setExpenseSubTab,
         expenseFilters, setExpenseFilters,

@@ -3,6 +3,7 @@ import {
     Wallet, Search, ChevronDown, X, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { STATUS_STYLES, THEME_BG_COLORS } from '../../utils/constants';
+import { SortConfig } from '../../utils/formatters';
 import StatusBadge from '../common/StatusBadge';
 import TablePagination from '../common/TablePagination';
 import { formatDateDisplay } from '../../utils/dates';
@@ -17,14 +18,15 @@ interface ExpensesPageProps {
     setExpenseFilters: (filters: any) => void;
     uniqueExpenseOptions: { cats: string[]; payments: string[] };
     expensesTableData: any;
+    expensesTotals?: Record<string, number>;
     currentPage: number;
     setCurrentPage: (page: number) => void;
     itemsPerPage: number;
     setItemsPerPage: (items: number) => void;
-    expSortConfig: any[];
-    setExpSortConfig: (config: any[]) => void;
+    expSortConfig: SortConfig[];
+    setExpSortConfig: (config: SortConfig[]) => void;
     formatBRL: (val: number, showCents: boolean, privacyMode: boolean) => string;
-    handleSort: (key: string, currentConfig: any[], setConfig: (c: any[]) => void) => void;
+    handleSort: (key: string, currentConfig: SortConfig[], setConfig: (c: SortConfig[]) => void) => void;
     expensesScrollRef: React.RefObject<HTMLDivElement>;
     expensesTableTopRef: React.RefObject<HTMLDivElement>;
 }
@@ -39,6 +41,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
     setExpenseFilters,
     uniqueExpenseOptions,
     expensesTableData,
+    expensesTotals,
     currentPage,
     setCurrentPage,
     itemsPerPage,
@@ -143,22 +146,56 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-700">
-                    <button
-                        onClick={() => { setExpenseSubTab('fixed'); setCurrentPage(1); }}
-                        className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${expenseSubTab === 'fixed' ? 'text-violet-600 dark:text-violet-400 border-violet-600 dark:border-violet-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Todas Fixas
-                    </button>
-                    <button
-                        onClick={() => { setExpenseSubTab('variable'); setCurrentPage(1); }}
-                        className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${expenseSubTab === 'variable' ? 'text-violet-600 dark:text-violet-400 border-violet-600 dark:border-violet-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Todas Variáveis
-                    </button>
+                <div className="flex flex-col md:flex-row items-center justify-between border-b border-slate-200 dark:border-slate-700 gap-4">
+                    {/* Tabs */}
+                    <div className="flex items-center gap-8 self-end">
+                        <button
+                            onClick={() => { setExpenseSubTab('fixed'); setCurrentPage(1); }}
+                            className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${expenseSubTab === 'fixed' ? 'text-violet-600 dark:text-violet-400 border-violet-600 dark:border-violet-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        >
+                            Fixas
+                        </button>
+                        <button
+                            onClick={() => { setExpenseSubTab('variable'); setCurrentPage(1); }}
+                            className={`pb-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${expenseSubTab === 'variable' ? 'text-violet-600 dark:text-violet-400 border-violet-600 dark:border-violet-400' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        >
+                            Variáveis
+                        </button>
+                    </div>
+
+                    {/* Totals Display */}
+                    {expensesTotals && (
+                        <div className="flex-shrink-0 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-t-xl md:rounded-xl p-2 flex gap-4 overflow-x-auto custom-scrollbar max-w-full mb-1">
+                            {Object.entries(expensesTotals).sort((a, b) => b[1] - a[1]).map(([status, total]) => {
+                                if (total === 0) return null;
+
+                                let colorClass = '';
+                                const s = status.toLowerCase();
+
+                                if (['cancelado', 'trancado', 'evadido'].includes(s)) {
+                                    colorClass = 'text-slate-500 dark:text-slate-400';
+                                } else if (['atrasado', 'pendente', 'não pago', 'nao pago'].includes(s)) {
+                                    colorClass = 'text-amber-500 dark:text-amber-400';
+                                } else {
+                                    // Default for 'Pago' or others: Green if positive, Red if negative
+                                    colorClass = total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+                                }
+
+                                return (
+                                    <div key={status} className="flex flex-col px-2 min-w-[80px] border-r border-slate-200 dark:border-slate-800 last:border-0">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase truncate">{status}</span>
+                                        <span className={`text-sm font-bold whitespace-nowrap ${colorClass}`}>
+                                            {formatBRL(total, settings.showCents, settings.privacyMode)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                            {Object.keys(expensesTotals).length === 0 && <span className="text-xs text-slate-400 italic px-2">Sem dados para somar</span>}
+                        </div>
+                    )}
                 </div>
             </div>
+
 
             {/* TABLE */}
             <div ref={expensesTableTopRef} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1 min-h-0">
@@ -217,7 +254,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                     onItemsPerPageChange={(items) => { setItemsPerPage(items); setCurrentPage(1); }}
                 />
             </div>
-        </div>
+        </div >
     );
 };
 

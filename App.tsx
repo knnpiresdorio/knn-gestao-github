@@ -109,7 +109,7 @@ const App = () => {
   const {
     dreData, stats, financialIndicators, graphData, balanceEvolution, balanceEvolutionBiweekly, balanceEvolutionMonthly, categoryChart, paymentMethodChart, growth, currentBalanceToday,
     alerts, dashboardLists,
-    expensesTableData, uniqueExpenseOptions,
+    expensesTableData, uniqueExpenseOptions, expensesTotals,
     graphFilters, setGraphFilters,
     expenseSubTab, setExpenseSubTab,
     expenseFilters, setExpenseFilters,
@@ -399,6 +399,7 @@ const App = () => {
             <Route path="/expenses" element={
               <ExpensesPage
                 expensesTableData={expensesTableData}
+                expensesTotals={expensesTotals}
                 uniqueExpenseOptions={uniqueExpenseOptions}
                 loading={loading}
                 currentPage={expensesCurrentPage}
