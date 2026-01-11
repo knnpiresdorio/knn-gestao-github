@@ -22,6 +22,8 @@ import ExpensesPage from './components/pages/ExpensesPage';
 import DrePage from './components/pages/DrePage';
 import DatabasePage from './components/pages/DatabasePage';
 import SettingsPage from './components/pages/SettingsPage';
+
+import ProjectionsPage from './components/pages/ProjectionsPage';
 import SystemAlert from './components/common/SystemAlert';
 import DetailsModal from './components/modals/DetailsModal';
 import OnboardingModal from './components/modals/OnboardingModal';
@@ -65,7 +67,9 @@ const App = () => {
     if (path === '/dre') return 'dre';
     if (path === '/dre-gerencial') return 'dre_gerencial';
     if (path === '/database') return 'database';
+
     if (path === '/settings') return 'configuracoes';
+    if (path === '/projections') return 'projections';
     return 'dashboard';
   }, [location.pathname]);
 
@@ -77,7 +81,9 @@ const App = () => {
       case 'dre': navigate('/dre'); break;
       case 'dre_gerencial': navigate('/dre-gerencial'); break;
       case 'database': navigate('/database'); break;
+
       case 'configuracoes': navigate('/settings'); break;
+      case 'projections': navigate('/projections'); break;
       default: navigate('/');
     }
   };
@@ -280,7 +286,8 @@ const App = () => {
                       : activeTab === 'dre' ? 'DRE Contábil'
                         : activeTab === 'expenses' ? 'Controle de Despesas'
                           : activeTab === 'students' ? 'Alunos & Matrículas'
-                            : 'Configurações'}
+                            : activeTab === 'projections' ? 'Projeções Financeiras'
+                              : 'Configurações'}
               </span>
             </div>
 
@@ -478,6 +485,21 @@ const App = () => {
                 onAddTenant={addTenant}
                 onUpdateTenant={updateTenant}
                 onDeleteTenant={deleteTenant}
+              />
+
+            } />
+
+            <Route path="/projections" element={
+              <ProjectionsPage
+                currentStats={{
+                  activeStudents: financialIndicators.ticketTotal || 0,
+                  ticketMedio: stats.ticketMedio || 0,
+                  inadimplencia: stats.inadimplencia || 0,
+                  fixedCosts: financialIndicators.fixedCosts || 0,
+                  variableCostsPercent: financialIndicators.cmPercent ? (100 - financialIndicators.cmPercent) : 0,
+                }}
+                settings={settings}
+                formatBRL={formatBRL}
               />
             } />
 

@@ -545,7 +545,9 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
                 breakEvenQuarterlyStudents,
 
                 quarterlyTickets, // { label: 'Q1', value: 123 }
-                ticketMedioQuarterlyCurrent
+                ticketMedioQuarterlyCurrent,
+                fixedCosts,
+                variableCosts
             },
             currentBalanceToday: totalMoneyCalculated,
             graphData: graphDataArray,

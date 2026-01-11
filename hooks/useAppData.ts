@@ -280,7 +280,7 @@ export const useAppData = () => {
                 desc: rawDesc,
                 resp: rawResp,
                 cat: cleanCat,
-                status: rawStatus,
+                status: toTitleCase(rawStatus),
                 type: rawType,
                 payment: cleanPayment,
                 account: rawAccount,

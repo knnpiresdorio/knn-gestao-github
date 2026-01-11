@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     LayoutDashboard, GraduationCap, Wallet, Layers, Table, Database, Settings, LogOut,
-    TrendingUp, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, X
+    TrendingUp, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, X, Target
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MenuItem from './MenuItem';
@@ -83,6 +83,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </Link>
                 <Link to="/database" className="block">
                     <MenuItem icon={Database} label="Base de Dados" active={activeTab === 'database'} collapsed={!isSidebarOpen} onClick={() => { }} theme={settings.themeColor} />
+                </Link>
+                <Link to="/projections" className="block">
+                    <MenuItem icon={Target} label="Projeções" active={activeTab === 'projections'} collapsed={!isSidebarOpen} onClick={() => { }} theme={settings.themeColor} />
                 </Link>
 
 

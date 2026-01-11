@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Wallet, Search, ChevronDown, X, ArrowUp, ArrowDown
+    Wallet, Search, ChevronDown, X, ArrowUp, ArrowDown, Loader2
 } from 'lucide-react';
 import { STATUS_STYLES, THEME_BG_COLORS } from '../../utils/constants';
 import { SortConfig } from '../../utils/formatters';
@@ -24,11 +24,12 @@ interface ExpensesPageProps {
     itemsPerPage: number;
     setItemsPerPage: (items: number) => void;
     expSortConfig: SortConfig[];
-    setExpSortConfig: (config: SortConfig[]) => void;
+    setExpSortConfig: (config: SortConfig[] | ((prev: SortConfig[]) => SortConfig[])) => void;
     formatBRL: (val: number, showCents: boolean, privacyMode: boolean) => string;
-    handleSort: (key: string, currentConfig: SortConfig[], setConfig: (c: SortConfig[]) => void) => void;
+    handleSort: (key: string, currentConfig: SortConfig[], setConfig: (c: SortConfig[] | ((prev: SortConfig[]) => SortConfig[])) => void) => void;
     expensesScrollRef: React.RefObject<HTMLDivElement>;
     expensesTableTopRef: React.RefObject<HTMLDivElement>;
+    loading: boolean;
 }
 
 const ExpensesPage: React.FC<ExpensesPageProps> = ({
@@ -51,7 +52,8 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
     formatBRL,
     handleSort,
     expensesScrollRef,
-    expensesTableTopRef
+    expensesTableTopRef,
+    loading
 }) => {
 
     const currentThemeBg = THEME_BG_COLORS[settings.themeColor] || 'bg-slate-900';
@@ -176,6 +178,8 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                                     colorClass = 'text-slate-500 dark:text-slate-400';
                                 } else if (['atrasado', 'pendente', 'não pago', 'nao pago'].includes(s)) {
                                     colorClass = 'text-amber-500 dark:text-amber-400';
+                                } else if (s === 'outros') {
+                                    colorClass = 'text-slate-500 dark:text-slate-400';
                                 } else {
                                     // Default for 'Pago' or others: Green if positive, Red if negative
                                     colorClass = total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
@@ -222,7 +226,16 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {(expensesTableData[expenseSubTab] || []).slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item: any) => {
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={7} className="p-12 text-center text-slate-400">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                                            <span>Carregando despesas...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (expensesTableData[expenseSubTab] || []).slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item: any) => {
                                 return (
                                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                         <td className="px-6 py-4 text-center">
@@ -237,7 +250,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({
                                     </tr>
                                 );
                             })}
-                            {(expensesTableData[expenseSubTab] || []).length === 0 && (
+                            {!loading && (expensesTableData[expenseSubTab] || []).length === 0 && (
                                 <tr><td colSpan={7} className="p-12 text-center text-slate-400">Nenhuma despesa encontrada.</td></tr>
                             )}
                         </tbody>
