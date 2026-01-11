@@ -17,7 +17,11 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
     // --- DRE DATA ---
     const dreData = useMemo(() => {
         // Simplified DRE aggregation based on dataByPeriod
-        const months: string[] = Array.from(new Set(dataByPeriod.map((i: any) => i.dateObj ? format(i.dateObj, 'yyyy-MM') : '').filter(Boolean) as string[])).sort();
+        const months: string[] = Array.from(new Set(dataByPeriod.map((i: any) => {
+            // For Date List: Use Payment Date if Paid, else Due Date
+            if (i.status === 'Pago' && i.dateExecObj) return format(i.dateExecObj, 'yyyy-MM');
+            return i.dateObj ? format(i.dateObj, 'yyyy-MM') : '';
+        }).filter(Boolean) as string[])).sort();
 
         const recipes: any = {};
         const expenses: any = {};
@@ -32,8 +36,12 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
 
         dataByPeriod.forEach((item: any) => {
             if (item.status !== 'Pago') return; // Cash basis
-            if (!item.dateObj) return;
-            const month = format(item.dateObj, 'yyyy-MM');
+
+            // For Cash Basis DRE: Use Payment Date (dateExecObj) if available, fallback to Due Date
+            const targetDate = item.dateExecObj || item.dateObj;
+            if (!targetDate) return;
+
+            const month = format(targetDate, 'yyyy-MM');
 
             if (item.type === 'Entrada') {
                 if (!recipes[item.cat]) recipes[item.cat] = {};
@@ -207,8 +215,11 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
                 }
             }
 
-            if (item.dateObj) {
-                const day = format(item.dateObj, 'yyyy-MM-dd');
+            // For Daily Timeline: Use Payment Date if Paid
+            const targetDate = (item.status === 'Pago' && item.dateExecObj) ? item.dateExecObj : item.dateObj;
+
+            if (targetDate) {
+                const day = format(targetDate, 'yyyy-MM-dd');
                 if (!dailyBalance[day]) dailyBalance[day] = 0;
                 if (item.status === 'Pago') {
                     dailyBalance[day] += (item.type === 'Entrada' ? val : -val);
@@ -271,7 +282,10 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
             const val = item.type === 'Entrada' ? item.absVal : -item.absVal;
 
             // Global Realized today
-            if (item.status === 'Pago' && item.dateObj && item.dateObj <= today) {
+            // Use dateExecObj for comparison if Paid
+            const itemDate = (item.status === 'Pago' && item.dateExecObj) ? item.dateExecObj : item.dateObj;
+
+            if (item.status === 'Pago' && itemDate && itemDate <= today) {
                 totalMoneyCalculated += val;
             }
 
@@ -291,8 +305,12 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         const periodProjected: Record<string, number> = {};
 
         processedData.forEach((item: any) => {
-            if (item.ts >= periodStartTs && item.ts <= periodEndTs && item.status !== 'Cancelado' && item.type !== 'Info' && item.dateObj) {
-                const day = format(item.dateObj, 'yyyy-MM-dd');
+            // Timeline Mapping: Use Payment Date if Paid
+            const effectiveDate = (item.status === 'Pago' && item.dateExecObj) ? item.dateExecObj : (item.ts ? new Date(item.ts) : null);
+            const effectiveTs = effectiveDate ? effectiveDate.getTime() : 0;
+
+            if (effectiveTs >= periodStartTs && effectiveTs <= periodEndTs && item.status !== 'Cancelado' && item.type !== 'Info' && effectiveDate) {
+                const day = format(effectiveDate, 'yyyy-MM-dd');
                 const val = item.type === 'Entrada' ? item.absVal : -item.absVal;
 
                 if (item.status === 'Pago') {
@@ -369,8 +387,11 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
         // Graph Data (Monthly Bar Chart)
         const graphDataMap: any = {};
         graphSource.forEach((item: any) => {
-            if (!item.dateObj) return;
-            const monthKey = format(item.dateObj, 'yyyy-MM');
+            // For Monthly Bar Graph: Use Payment Date if Paid (Cash View)
+            const targetDate = (item.status === 'Pago' && item.dateExecObj) ? item.dateExecObj : item.dateObj;
+            if (!targetDate) return;
+
+            const monthKey = format(targetDate, 'yyyy-MM');
             if (!graphDataMap[monthKey]) {
                 graphDataMap[monthKey] = { name: formatMonthLabel(monthKey), monthKey, entradaPago: 0, entradaPendente: 0, saidaPago: 0, saidaPendente: 0 };
             }
@@ -419,7 +440,9 @@ export const useFinancialData = (processedData: any[], dataByPeriod: any[], stud
             let qRev = 0;
 
             processedData.forEach((item: any) => {
-                if (item.status === 'Pago' && item.dateObj && item.dateObj >= start && item.dateObj <= end) {
+                // Quarterly Break Even: Use Payment Date
+                const targetDate = item.dateExecObj || item.dateObj;
+                if (item.status === 'Pago' && targetDate && targetDate >= start && targetDate <= end) {
                     if (item.type === 'Entrada') {
                         qRev += item.absVal;
                     } else if (item.type === 'Saída') {

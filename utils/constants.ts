@@ -38,5 +38,6 @@ export const STATUS_STYLES: Record<string, { bg: string; text: string; dot: stri
     'Concluído': { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-700 dark:text-teal-400', dot: 'bg-teal-500' },
     'Matriculado': { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-700 dark:text-indigo-400', dot: 'bg-indigo-500' },
     'Outros': { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-400' },
+    '': { bg: 'bg-slate-50 dark:bg-slate-800/50', text: 'text-slate-400 dark:text-slate-500', dot: 'bg-slate-300' },
     'Default': { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-400' }
 };

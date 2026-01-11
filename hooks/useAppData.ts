@@ -239,7 +239,7 @@ export const useAppData = () => {
             const rawDesc = item['Descrição'] || item['descricao'] || item['Descricao'] || '';
             const rawResp = item['Responsável'] || item['responsavel'] || item['Responsavel'] || '';
             const rawCat = item['Categoria'] || item['categoria'] || '';
-            const rawStatus = item['Status'] || item['status'] || 'Pendente';
+            const rawStatus = item['Status'] || item['status'] || ''; // Changed from 'Pendente' to ''
             // Default type: If 'geral' source (Student Registry), default to 'Info', else 'Saída'
             const rawType = item['Tipo'] || item['tipo'] || (item.source === 'geral' ? 'Info' : 'Saída');
             const rawPayment = item['Forma_Pag'] || item['forma_pag'] || 'Outros';
@@ -254,6 +254,13 @@ export const useAppData = () => {
 
             const val = parseCurrency(rawValLiq);
             const dateObj = parseDateString(rawDate);
+
+            // Parse Payment Date if available
+            let dateExecObj: Date | null = null;
+            if (rawDateExec && rawDateExec !== '-' && rawDateExec.trim() !== '') {
+                dateExecObj = parseDateString(rawDateExec);
+            }
+
             let cleanCat = rawCat.replace(/^(REC|DSP) - /g, '').trim();
             cleanCat = toTitleCase(cleanCat);
             const cleanPayment = toTitleCase(rawPayment);
@@ -282,6 +289,7 @@ export const useAppData = () => {
                 grossVal: Math.abs(parseCurrency(rawValBruto)),
                 classification: classification,
                 dateExec: rawDateExec,
+                dateExecObj: dateExecObj,
                 obs: rawObs
             };
         }).filter(r => (r.date && r.desc) || r.source === 'geral');
